@@ -28,11 +28,31 @@ Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')-
 Route::middleware(['auth', 'role:2,3'])->prefix('panel/consultor')->name('panel.consultor.')->group(function () {
     Route::redirect('/', '/panel/consultor/inicio');
     Route::get('inicio', [DashboardController::class, 'index'])->name('inicio');
-    Route::get('usuarios', [UsuariosController::class, 'index'])->name('usuarios.index');
-    Route::get('clientes', [ClientesController::class, 'index'])->name('clientes.index');
-    Route::get('asociados', [AsociadosController::class, 'index'])->name('asociados.index');
     Route::get('informes', [InformesController::class, 'index'])->name('informes.index');
+
+    Route::get('usuarios/crear', [UsuariosController::class, 'create'])->name('usuarios.create');
+    Route::post('usuarios', [UsuariosController::class, 'store'])->name('usuarios.store');
+    Route::get('usuarios/{usuario}/editar', [UsuariosController::class, 'edit'])->name('usuarios.edit');
+    Route::put('usuarios/{usuario}', [UsuariosController::class, 'update'])->name('usuarios.update');
+    Route::get('usuarios', [UsuariosController::class, 'index'])->name('usuarios.index');
+
+    Route::get('clientes/crear', [ClientesController::class, 'create'])->name('clientes.create');
+    Route::post('clientes', [ClientesController::class, 'store'])->name('clientes.store');
+    Route::get('clientes/{cliente}/editar', [ClientesController::class, 'edit'])->name('clientes.edit');
+    Route::put('clientes/{cliente}', [ClientesController::class, 'update'])->name('clientes.update');
+    Route::patch('clientes/{cliente}/activo', [ClientesController::class, 'toggleActivo'])->name('clientes.toggle-activo');
+    Route::get('clientes', [ClientesController::class, 'index'])->name('clientes.index');
+
+    Route::get('asociados/crear', [AsociadosController::class, 'create'])->name('asociados.create');
+    Route::post('asociados', [AsociadosController::class, 'store'])->name('asociados.store');
+    Route::get('asociados/{proveedor}/editar', [AsociadosController::class, 'edit'])->name('asociados.edit');
+    Route::put('asociados/{proveedor}', [AsociadosController::class, 'update'])->name('asociados.update');
+    Route::delete('asociados/{proveedor}', [AsociadosController::class, 'destroy'])->name('asociados.destroy');
+    Route::get('asociados', [AsociadosController::class, 'index'])->name('asociados.index');
+
+    Route::post('solicitudes-usuarios/{solicitudUsuario}/responder', [SolicitudesUsuarioController::class, 'responder'])->name('solicitudes-usuarios.responder');
     Route::get('solicitudes-usuarios', [SolicitudesUsuarioController::class, 'index'])->name('solicitudes-usuarios.index');
+
     Route::get('solicitudes', [ConsultorSolicitudController::class, 'index'])->name('solicitudes.index');
     Route::post('solicitudes/{solicitud}/asignar', [ConsultorSolicitudController::class, 'asignar'])->name('solicitudes.asignar');
     Route::get('solicitudes/{solicitud}', [ConsultorSolicitudController::class, 'show'])->name('solicitudes.show');

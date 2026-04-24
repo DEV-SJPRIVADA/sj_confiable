@@ -5,8 +5,11 @@
 @section('content')
     <div class="header-container-proveedores d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h1 class="fw-light">Asociados de negocios</h1>
+        @can('create', \App\Models\Proveedor::class)
+            <a href="{{ route('panel.consultor.asociados.create') }}" class="btn btn-primary btn-sm">Nuevo asociado</a>
+        @endcan
     </div>
-    <p class="text-muted small mb-3">Vista de consulta. Registro y edición de asociados (flujo del legado) se portará después.</p>
+    <p class="text-muted small mb-3">CRUD de asociados. La eliminación solo se permite si no hay solicitudes ni usuarios vinculados.</p>
     <div class="table-responsive rounded-legacy bg-white">
         <table class="table table-legacy table-sm table-bordered table-hover align-middle mb-0">
             <thead class="table-light">
@@ -17,6 +20,7 @@
                 <th>Ciudad</th>
                 <th>Correo</th>
                 <th>Contacto</th>
+                <th class="text-nowrap">Acciones</th>
             </tr>
             </thead>
             <tbody>
@@ -28,6 +32,18 @@
                     <td>{{ $p->ciudad_proveedor ?? '—' }}</td>
                     <td>{{ $p->correo_proveedor ?? '—' }}</td>
                     <td>{{ $p->nombre_contacto_proveedor ?? '—' }}</td>
+                    <td class="text-nowrap">
+                        @can('update', $p)
+                            <a href="{{ route('panel.consultor.asociados.edit', $p) }}" class="btn btn-sm btn-outline-primary">Editar</a>
+                        @endcan
+                        @can('delete', $p)
+                            <form method="post" action="{{ route('panel.consultor.asociados.destroy', $p) }}" class="d-inline" onsubmit="return confirm('¿Eliminar este asociado?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                            </form>
+                        @endcan
+                    </td>
                 </tr>
             @endforeach
             </tbody>
