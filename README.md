@@ -61,15 +61,27 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 
 | Área | Rutas (resumen) | Política |
 |------|------------------|----------|
-| Clientes | listado, crear/editar, activar-inactivar (cliente y usuarios vinculados) | `ClientePolicy` |
-| Asociados (proveedores) | CRUD; eliminación sujeta a reglas de negocio en servicio | `ProveedorPolicy` |
+| Clientes | listado (orden, búsqueda, paginación); **crear/editar en modales**; activar/inactivar con switch (cliente y usuarios vinculados) | `ClientePolicy` |
+| Asociados (proveedores) | listado (orden, búsqueda, paginación); **crear/editar en modales**; eliminación sujeta a reglas de negocio en servicio | `ProveedorPolicy` |
 | Usuarios | listado (orden, búsqueda, paginación); **crear y editar en modales** sobre el listado; reglas de roles alineadas al legado (admin 2 no edita superadmin 3 ni asigna roles SJ sin permisos) | `UsuarioPolicy` |
 | Solicitudes de usuarios | listado, responder aprobar/rechazar con comentario | `SolicitudUsuarioPolicy` |
 | Solicitudes de confiabilidad | (existente) | `SolicitudPolicy` |
 
 - **Form requests:** `app/Http/Requests/Catalog/` (alta/edición y respuesta de solicitudes de usuario).
 - **Servicios:** `app/Services/Catalog/` (transacciones y validaciones de catálogo; `SolicitudUsuarioRespuestaService` para cerrar solicitudes).
-- Vistas de formulario en `resources/views/panel/consultor/{clientes,asociados,usuarios}/` e índices con acciones según `@can`.
+- Vistas de listado y **partials** de modales en `resources/views/panel/consultor/{clientes,asociados,usuarios}/` (p. ej. `partials/modals-*.blade.php`, `partials/form-body.blade.php`) e índices con acciones según `@can`.
+
+#### Clientes (consultor) — modales y listado
+
+- **Alta y edición** en **modales** desde el listado (`clientes/index`, `partials/modals-clientes`, `partials/form-body`). `GET .../clientes/crear` y `GET .../clientes/{id}/editar` redirigen con `open_modal` / `edit_cliente`.
+- Listado alineado al legado: cabecera oscura, columnas NIT, razón social, dirección, ciudad, teléfono, correo, nombre, cargo, tipo; **Acciones**: cajita lápiz (dorada) + switch activo/inactivo.
+- Campos tipo **cliente** y **ciudad** con desplegables desde catálogos en controlador; validación con `failedValidation` hacia el índice (`StoreClienteRequest`, `UpdateClienteRequest`).
+
+#### Asociados de negocios (consultor) — modales y listado
+
+- **Alta y edición** en **modales** (`asociados/index`, `partials/modals-asociados`, `partials/form-body`). `GET .../asociados/crear` y `GET .../asociados/{proveedor}/editar` redirigen con `open_modal` / `edit_proveedor`.
+- Listado: NIT, razón social, comercial, ciudad, contacto, cargo; **Acciones**: cajita lápiz (editar) y cajita **papelera** (eliminar, con confirmación) si la política lo permite. Estilo de cabecera y pie de modal coherente con clientes/usuarios (degradado azul, icono de guardar en disquete).
+- Validación: `StoreProveedorRequest` y `UpdateProveedorRequest` con `failedValidation` al listado; eliminación vía `ProveedorCatalogService` (bloquea si hay solicitudes o usuarios vinculados).
 
 #### Usuarios (consultor) — modales y UX
 
@@ -102,7 +114,7 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 ## Estructura relevante (código)
 
 - `app/Http/Controllers/Panel/Consultor/`: controladores del panel consultor
-- `app/Http/Requests/Catalog/`: validación de formularios de catálogos (consultor; usuarios: `StoreUsuarioGestionRequest`, `UpdateUsuarioGestionRequest` con `failedValidation` hacia el listado)
+- `app/Http/Requests/Catalog/`: validación de catálogos (consultor); en **usuarios**, **clientes** y **asociados**, los *Form requests* de alta/edición usan `failedValidation` para volver al listado y reabrir el modal correspondiente cuando hay errores.
 - `app/Models/`: modelos Eloquent mapeando tablas legado (`solicitudes`, `t_usuarios`, `t_clientes`, `t_proveedores`, etc.)
 - `app/Policies/`: `SolicitudPolicy`, `ClientePolicy`, `ProveedorPolicy`, `UsuarioPolicy`, `SolicitudUsuarioPolicy`, y `Policies/Concerns/AuthorizesSJStaff`
 - `app/Services/Solicitud/`: lógica de listados y asignación a asociado

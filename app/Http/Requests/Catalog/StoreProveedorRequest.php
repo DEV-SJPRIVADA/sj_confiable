@@ -4,13 +4,40 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Catalog;
 
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class StoreProveedorRequest extends FormRequest
 {
     public function authorize(): bool
     {
         return $this->user() !== null;
+    }
+
+    protected function failedValidation(Validator $validator): void
+    {
+        throw new HttpResponseException(
+            redirect()
+                ->route('panel.consultor.asociados.index', array_merge(
+                    $this->queryForRedirectBack(),
+                    ['open_modal' => 'crear'],
+                ))
+                ->withInput()
+                ->with('open_modal', 'crear')
+                ->withErrors($validator)
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function queryForRedirectBack(): array
+    {
+        return array_filter(
+            $this->only(['per_page', 'q', 'sort', 'dir']),
+            static fn (mixed $v): bool => $v !== null && $v !== '',
+        );
     }
 
     /**
