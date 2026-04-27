@@ -41,6 +41,7 @@ Route::middleware(['auth', 'role:2,3'])->prefix('panel/consultor')->name('panel.
     Route::post('usuarios', [UsuariosController::class, 'store'])->name('usuarios.store');
     Route::get('usuarios/{usuario}/editar', [UsuariosController::class, 'edit'])->name('usuarios.edit');
     Route::put('usuarios/{usuario}', [UsuariosController::class, 'update'])->name('usuarios.update');
+    Route::post('usuarios/{usuario}/toggle-activo', [UsuariosController::class, 'toggleActivo'])->name('usuarios.toggle-activo');
     Route::get('usuarios', [UsuariosController::class, 'index'])->name('usuarios.index');
 
     Route::get('clientes/crear', [ClientesController::class, 'create'])->name('clientes.create');

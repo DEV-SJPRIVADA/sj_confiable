@@ -63,13 +63,20 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 |------|------------------|----------|
 | Clientes | listado, crear/editar, activar-inactivar (cliente y usuarios vinculados) | `ClientePolicy` |
 | Asociados (proveedores) | CRUD; eliminación sujeta a reglas de negocio en servicio | `ProveedorPolicy` |
-| Usuarios | listado, crear/editar; reglas de roles alineadas al legado (admin 2 no edita superadmin 3 ni asigna roles SJ sin permisos) | `UsuarioPolicy` |
+| Usuarios | listado (orden, búsqueda, paginación); **crear y editar en modales** sobre el listado; reglas de roles alineadas al legado (admin 2 no edita superadmin 3 ni asigna roles SJ sin permisos) | `UsuarioPolicy` |
 | Solicitudes de usuarios | listado, responder aprobar/rechazar con comentario | `SolicitudUsuarioPolicy` |
 | Solicitudes de confiabilidad | (existente) | `SolicitudPolicy` |
 
 - **Form requests:** `app/Http/Requests/Catalog/` (alta/edición y respuesta de solicitudes de usuario).
 - **Servicios:** `app/Services/Catalog/` (transacciones y validaciones de catálogo; `SolicitudUsuarioRespuestaService` para cerrar solicitudes).
-- Vistas de formulario en `resources/views/panel/consultor/{clientes,asociados,usuarios}/` (create, edit) e índices con acciones según `@can`.
+- Vistas de formulario en `resources/views/panel/consultor/{clientes,asociados,usuarios}/` e índices con acciones según `@can`.
+
+#### Usuarios (consultor) — modales y UX
+
+- **Alta y edición** se realizan en **ventanas modales** desde el listado (`resources/views/panel/consultor/usuarios/index.blade.php` + `partials/modals-usuarios.blade.php` y `partials/form-body.blade.php`). Las rutas `GET .../usuarios/crear` y `GET .../usuarios/{id}/editar` **redirigen** al listado con `?open_modal=crear` o `?open_modal=editar&edit_usuario=...` para abrir el modal correspondiente.
+- **Estilo** de cabecera y pie: degradado en azul oscuro (alineado al legado), botones Cerrar / Guardar (icono de guardado), permisos de documentos/solicitudes como **switches** (`form-switch`), orden de campos y checklist de contraseña en pantalla.
+- **Validación** (`StoreUsuarioGestionRequest`, `UpdateUsuarioGestionRequest`): contraseña con reglas `Password` de Laravel (8–15 caracteres, mayúscula, minúscula, número, símbolo); identificación obligatoria. Si falla la validación, se redirige al listado con **reapertura** del modal y `withInput` (sin conservar la contraseña en el flujo de error).
+- **Columna Acciones** del listado: botón de editar con **cajita** (borde dorado, icono de lápiz) y **switch** activo/inactivo alineados con flex; el botón de editar se atenúa visualmente si el usuario está inactivo.
 
 #### Inicio (dashboard) consultor
 
@@ -95,7 +102,7 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 ## Estructura relevante (código)
 
 - `app/Http/Controllers/Panel/Consultor/`: controladores del panel consultor
-- `app/Http/Requests/Catalog/`: validación de formularios de catálogos (consultor)
+- `app/Http/Requests/Catalog/`: validación de formularios de catálogos (consultor; usuarios: `StoreUsuarioGestionRequest`, `UpdateUsuarioGestionRequest` con `failedValidation` hacia el listado)
 - `app/Models/`: modelos Eloquent mapeando tablas legado (`solicitudes`, `t_usuarios`, `t_clientes`, `t_proveedores`, etc.)
 - `app/Policies/`: `SolicitudPolicy`, `ClientePolicy`, `ProveedorPolicy`, `UsuarioPolicy`, `SolicitudUsuarioPolicy`, y `Policies/Concerns/AuthorizesSJStaff`
 - `app/Services/Solicitud/`: lógica de listados y asignación a asociado

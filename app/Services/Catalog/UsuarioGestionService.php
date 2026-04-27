@@ -110,6 +110,11 @@ final class UsuarioGestionService
         });
     }
 
+    public function setActivo(Usuario $usuario, bool $activo): void
+    {
+        $usuario->update(['activo' => $activo ? 1 : 0]);
+    }
+
     /**
      * @param  array{id_rol:int,id_cliente?:?int,id_proveedor?:?int}  $data
      */

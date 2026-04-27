@@ -78,6 +78,11 @@ class UsuarioPolicy
         return true;
     }
 
+    public function toggleActivo(Usuario $actor, Usuario $target): bool
+    {
+        return $this->update($actor, $target);
+    }
+
     private function isSuperAdmin(Usuario $usuario): bool
     {
         return (int) $usuario->id_rol === UserRole::SuperAdmin->value;
