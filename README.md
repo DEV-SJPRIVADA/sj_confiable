@@ -65,6 +65,7 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 | Asociados (proveedores) | listado (orden, búsqueda, paginación); **crear/editar en modales**; eliminación sujeta a reglas de negocio en servicio | `ProveedorPolicy` |
 | Usuarios | listado (orden, búsqueda, paginación); **crear y editar en modales** sobre el listado; reglas de roles alineadas al legado (admin 2 no edita superadmin 3 ni asigna roles SJ sin permisos) | `UsuarioPolicy` |
 | Solicitudes de usuarios | listado, responder aprobar/rechazar con comentario | `SolicitudUsuarioPolicy` |
+| Informes (solicitudes) | listado con filtros y paginación; exportación CSV (simil Excel) | `SolicitudPolicy` |
 | Solicitudes de confiabilidad | gestión (listado), detalle/asignación | `SolicitudPolicy` |
 
 - **Form requests:** `app/Http/Requests/Catalog/` (alta/edición y respuesta de solicitudes de usuario).
@@ -97,6 +98,13 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 - **Vista por solicitud** `GET /panel/consultor/solicitudes/{solicitud}`: cabecera con **Volver al listado**, botones **Detalle** e **Historial**; **offcanvas** lateral izquierdo (detalle ampliado + bloque de documentos, hash `#documentos`) y derecho (historial de respuestas, hash `#historial`); cuerpo central con *Nueva respuesta* (formulario de envío en preparación) y *Asignación de asociado de negocio* (orden de campos alineado al legado). Fragmentos reutilizables: `resources/views/panel/solicitudes/_fragment-documentos-solicitud.blade.php` y `_fragment-historial-respuestas.blade.php` (compuestos desde `panel/solicitudes/_detalle.blade.php` para cliente y otros roles).
 - **Partials consultor:** `_modal-detalle-solicitud.blade.php` (modal listado), `_offcanvases-gestion-solicitud.blade.php` (paneles laterales en show).
 
+#### Informes de solicitudes (consultor)
+
+- **Rutas:** `GET /panel/consultor/informes` (listado) y `GET /panel/consultor/informes/exportar` (descarga de archivo CSV UTF-8 con BOM, separador `;`, nombre `informe_solicitudes_YYYY-mm-dd_HHMMSS.csv`). Los filtros se pasan por query string en ambas (`desde`, `hasta`, `estado`, `servicio_id`, `per_page`).
+- **Filtros:** rango de fechas sobre `fecha_creacion`, estado, servicio (incluye solicitudes cuyo servicio venga de `solicitudes.servicio_id` o de la tabla pivot `solicitud_servicios` vía relación `serviciosPivote`).
+- **Vista** `resources/views/panel/consultor/informes/index.blade.php`: título *Informes de Solicitudes*, acciones *Filtrar* y *Exportar a Excel*, tabla con columnas Cliente, Documento, Nombres, Fecha creación, Estado (badges) y Servicio, estilo cebra y pie con rango de resultados mostrado.
+- **Código:** `app/Http/Controllers/Panel/Consultor/InformesController.php` (`index`, `export`, `buildInformesQuery`).
+
 #### Inicio (dashboard) consultor
 
 - Ruta: `GET /panel/consultor/inicio` — datos y gráficos respetan **filtros GET** (empresa/cliente, servicio, estado, rango de fechas).
@@ -127,6 +135,7 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 - `app/Services/Solicitud/`: lógica de listados y asignación a asociado
 - `app/Repositories/Contracts/SolicitudRepository.php` y `EloquentSolicitudRepository.php`: listados y `paginateForConsultor` (búsqueda y orden)
 - `resources/views/panel/consultor/solicitudes/`: index (gestión), show (gestión/respuesta con offcanvas), modales y partials asociados
+- `resources/views/panel/consultor/informes/`: informe de solicitudes (listado y export CSV)
 - `public/images/pdf.png`: icono de documentos en el listado (referencia al legado)
 - `app/Services/Catalog/`: lógica de clientes, proveedores, usuarios y respuesta a solicitudes de usuario
 - `app/Services/Panel/ConsultorDashboardService.php`: dashboard consultor (KPI, gráficos, tablas recientes)

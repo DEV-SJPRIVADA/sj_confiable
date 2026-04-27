@@ -36,6 +36,7 @@ Route::middleware(['auth', 'role:2,3'])->prefix('panel/consultor')->name('panel.
     Route::redirect('/', '/panel/consultor/inicio');
     Route::get('inicio', [DashboardController::class, 'index'])->name('inicio');
     Route::get('informes', [InformesController::class, 'index'])->name('informes.index');
+    Route::get('informes/exportar', [InformesController::class, 'export'])->name('informes.export');
 
     Route::get('usuarios/crear', [UsuariosController::class, 'create'])->name('usuarios.create');
     Route::post('usuarios', [UsuariosController::class, 'store'])->name('usuarios.store');
