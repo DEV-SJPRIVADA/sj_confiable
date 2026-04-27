@@ -11,7 +11,6 @@ use App\Models\Solicitud;
 use App\Models\Usuario;
 use App\Repositories\Contracts\SolicitudRepository;
 use App\Services\Solicitud\SolicitudAsignacionService;
-use App\Services\Solicitud\SolicitudListService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -19,7 +18,6 @@ use Illuminate\View\View;
 class SolicitudController extends Controller
 {
     public function __construct(
-        private readonly SolicitudListService $listado,
         private readonly SolicitudRepository $solicitudes,
         private readonly SolicitudAsignacionService $asignacion,
     ) {}
@@ -28,11 +26,41 @@ class SolicitudController extends Controller
     {
         $this->authorize('viewAny', Solicitud::class);
 
-        /** @var Usuario $usuario */
-        $usuario = $request->user();
+        $vista = $request->input('vista', 'activas');
+        $activo = $vista === 'inactivas' ? 0 : 1;
+
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
+
+        $q = trim((string) $request->input('q', ''));
+
+        $sort = (string) $request->input('sort', 'fecha');
+        $dir = strtolower((string) $request->input('dir', 'desc'));
+        if (! in_array($dir, ['asc', 'desc'], true)) {
+            $dir = 'desc';
+        }
+        $sortColumns = ['id', 'evaluado', 'documento', 'ciudad', 'fecha', 'estado', 'cliente', 'enviado'];
+        if (! in_array($sort, $sortColumns, true)) {
+            $sort = 'fecha';
+        }
+
+        $solicitudes = $this->solicitudes->paginateForConsultor(
+            $activo,
+            $perPage,
+            $q,
+            $sort,
+            $dir,
+        );
 
         return view('panel.consultor.solicitudes.index', [
-            'solicitudes' => $this->listado->forActor($usuario),
+            'solicitudes' => $solicitudes,
+            'vista' => $vista === 'inactivas' ? 'inactivas' : 'activas',
+            'perPage' => $perPage,
+            'q' => $q,
+            'sort' => $sort,
+            'dir' => $dir,
             'detalleRoute' => 'panel.consultor.solicitudes.show',
         ]);
     }

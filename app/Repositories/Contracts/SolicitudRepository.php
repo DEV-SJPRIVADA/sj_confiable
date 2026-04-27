@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories\Contracts;
 
 use App\Models\Solicitud;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 interface SolicitudRepository
@@ -15,6 +16,17 @@ interface SolicitudRepository
      * @return Collection<int, Solicitud>
      */
     public function listActiveForConsultor(int $activo = 1): Collection;
+
+    /**
+     * Listado paginado para el panel consultor (gestión de solicitudes) con búsqueda y orden.
+     */
+    public function paginateForConsultor(
+        int $activo,
+        int $perPage,
+        string $q,
+        string $sort,
+        string $dir
+    ): LengthAwarePaginator;
 
     /**
      * Listado para asociado de negocios (rol 6): solo solicitudes asignadas a su id_proveedor.

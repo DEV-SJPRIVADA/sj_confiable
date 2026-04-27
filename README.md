@@ -65,7 +65,7 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 | Asociados (proveedores) | listado (orden, búsqueda, paginación); **crear/editar en modales**; eliminación sujeta a reglas de negocio en servicio | `ProveedorPolicy` |
 | Usuarios | listado (orden, búsqueda, paginación); **crear y editar en modales** sobre el listado; reglas de roles alineadas al legado (admin 2 no edita superadmin 3 ni asigna roles SJ sin permisos) | `UsuarioPolicy` |
 | Solicitudes de usuarios | listado, responder aprobar/rechazar con comentario | `SolicitudUsuarioPolicy` |
-| Solicitudes de confiabilidad | (existente) | `SolicitudPolicy` |
+| Solicitudes de confiabilidad | gestión (listado), detalle/asignación | `SolicitudPolicy` |
 
 - **Form requests:** `app/Http/Requests/Catalog/` (alta/edición y respuesta de solicitudes de usuario).
 - **Servicios:** `app/Services/Catalog/` (transacciones y validaciones de catálogo; `SolicitudUsuarioRespuestaService` para cerrar solicitudes).
@@ -89,6 +89,13 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 - **Estilo** de cabecera y pie: degradado en azul oscuro (alineado al legado), botones Cerrar / Guardar (icono de guardado), permisos de documentos/solicitudes como **switches** (`form-switch`), orden de campos y checklist de contraseña en pantalla.
 - **Validación** (`StoreUsuarioGestionRequest`, `UpdateUsuarioGestionRequest`): contraseña con reglas `Password` de Laravel (8–15 caracteres, mayúscula, minúscula, número, símbolo); identificación obligatoria. Si falla la validación, se redirige al listado con **reapertura** del modal y `withInput` (sin conservar la contraseña en el flujo de error).
 - **Columna Acciones** del listado: botón de editar con **cajita** (borde dorado, icono de lápiz) y **switch** activo/inactivo alineados con flex; el botón de editar se atenúa visualmente si el usuario está inactivo.
+
+#### Solicitudes de confiabilidad (consultor) — gestión, modal y vista de respuesta
+
+- **Listado** `GET /panel/consultor/solicitudes`: pantalla *Gestión de Solicitudes* alineada al legado: conmutador Activas/Inactivas (`solicitudes.activo`), búsqueda, ordenación, paginación, filas resaltadas por estado, acciones con icono PDF (`public/images/pdf.png`) y contador de documentos (sin documentos el control no navega). La **lupa** abre un **modal** (*Detalle de Solicitud*) sin salir del listado; la **lista** enlaza a la vista de gestión con ancla `#historial` (abre el panel de historial).
+- **Datos:** `SolicitudRepository::paginateForConsultor()` y `baseListQuery()` cargan relaciones necesarias (incl. `paquete`, `proveedorAsignado`, `documentos` donde aplica).
+- **Vista por solicitud** `GET /panel/consultor/solicitudes/{solicitud}`: cabecera con **Volver al listado**, botones **Detalle** e **Historial**; **offcanvas** lateral izquierdo (detalle ampliado + bloque de documentos, hash `#documentos`) y derecho (historial de respuestas, hash `#historial`); cuerpo central con *Nueva respuesta* (formulario de envío en preparación) y *Asignación de asociado de negocio* (orden de campos alineado al legado). Fragmentos reutilizables: `resources/views/panel/solicitudes/_fragment-documentos-solicitud.blade.php` y `_fragment-historial-respuestas.blade.php` (compuestos desde `panel/solicitudes/_detalle.blade.php` para cliente y otros roles).
+- **Partials consultor:** `_modal-detalle-solicitud.blade.php` (modal listado), `_offcanvases-gestion-solicitud.blade.php` (paneles laterales en show).
 
 #### Inicio (dashboard) consultor
 
@@ -118,6 +125,9 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 - `app/Models/`: modelos Eloquent mapeando tablas legado (`solicitudes`, `t_usuarios`, `t_clientes`, `t_proveedores`, etc.)
 - `app/Policies/`: `SolicitudPolicy`, `ClientePolicy`, `ProveedorPolicy`, `UsuarioPolicy`, `SolicitudUsuarioPolicy`, y `Policies/Concerns/AuthorizesSJStaff`
 - `app/Services/Solicitud/`: lógica de listados y asignación a asociado
+- `app/Repositories/Contracts/SolicitudRepository.php` y `EloquentSolicitudRepository.php`: listados y `paginateForConsultor` (búsqueda y orden)
+- `resources/views/panel/consultor/solicitudes/`: index (gestión), show (gestión/respuesta con offcanvas), modales y partials asociados
+- `public/images/pdf.png`: icono de documentos en el listado (referencia al legado)
 - `app/Services/Catalog/`: lógica de clientes, proveedores, usuarios y respuesta a solicitudes de usuario
 - `app/Services/Panel/ConsultorDashboardService.php`: dashboard consultor (KPI, gráficos, tablas recientes)
 - `config/sj.php`: URLs opcionales (login: WhatsApp, redes, olvidé contraseña)
