@@ -16,6 +16,9 @@
 /public/build
 /public/hot
 /public/storage
+# Vídeo de login (colocar localmente; ver README)
+/public/videos/*.mp4
+/public/videos/*.webm
 /storage/*.key
 /storage/pail
 /vendor

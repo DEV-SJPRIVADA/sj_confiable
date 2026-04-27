@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Routing\RoleHome;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Panel\Cliente\SolicitudController as ClienteSolicitudController;
 use App\Http\Controllers\Panel\Consultor\AsociadosController;
@@ -12,10 +13,16 @@ use App\Http\Controllers\Panel\Consultor\SolicitudController as ConsultorSolicit
 use App\Http\Controllers\Panel\Consultor\SolicitudesUsuarioController;
 use App\Http\Controllers\Panel\Consultor\UsuariosController;
 use App\Http\Controllers\Panel\Proveedor\SolicitudController as ProveedorSolicitudController;
+use App\Models\Usuario;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    $user = auth()->user();
+    if ($user instanceof Usuario) {
+        return redirect(RoleHome::pathFor($user));
+    }
+
+    return redirect()->route('login');
 })->name('home');
 
 Route::middleware('guest')->group(function () {

@@ -16,6 +16,7 @@ use App\Repositories\Contracts\SolicitudRepository;
 use App\Repositories\Eloquent\EloquentSolicitudRepository;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -33,5 +34,11 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Usuario::class, UsuarioPolicy::class);
         Gate::policy(SolicitudUsuario::class, SolicitudUsuarioPolicy::class);
         Paginator::useBootstrapFive();
+
+        View::composer('layouts.partials.navbar-consultor', function ($view): void {
+            $pendUsu = SolicitudUsuario::query()->where('estado', 'Pendiente')->count();
+            $nuevasSol = Solicitud::query()->where('activo', 1)->where('estado', 'Nuevo')->count();
+            $view->with('notificacionBadgeCount', $pendUsu + $nuevasSol);
+        });
     }
 }

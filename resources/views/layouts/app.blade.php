@@ -45,6 +45,13 @@
     @endif
     @yield('content')
 </main>
+@auth
+    @if (in_array($roleId, [2, 3], true))
+        <footer class="text-center text-muted small py-3 border-top border-secondary border-opacity-25 bg-body-secondary bg-opacity-25 mt-3">
+            <div class="container-fluid">SJ Seguridad Privada LTDA &copy; {{ date('Y') }}. Todos los derechos reservados.</div>
+        </footer>
+    @endif
+@endauth
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 @stack('scripts')

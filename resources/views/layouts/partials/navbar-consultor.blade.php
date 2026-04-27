@@ -1,5 +1,8 @@
 @php
     $u = auth()->user();
+    $logoNavbar = asset('images/logo-sj-confiable.png');
+    $logoNavbar .= is_file(public_path('images/logo-sj-confiable.png')) ? '?v='.filemtime(public_path('images/logo-sj-confiable.png')) : '';
+    $notificacionBadgeCount = $notificacionBadgeCount ?? 0;
     $r = 'panel.consultor.';
     $inicio = request()->routeIs($r.'inicio');
     $usu = request()->routeIs($r.'usuarios.*');
@@ -13,7 +16,7 @@
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top large-navbar">
     <div class="container-fluid position-relative">
         <a class="navbar-brand d-flex align-items-center" href="{{ route('panel.consultor.inicio') }}">
-            <img src="{{ asset('images/logo-sj-confiable.png') }}" alt="SJ Confiable" class="navbar-logo me-2" width="192" height="48" style="height:2.7rem;max-height:3rem;width:12rem;object-fit:contain;">
+            <img src="{{ $logoNavbar }}" alt="SJ Seguridad Privada" class="navbar-logo me-2" width="192" height="48" style="height:2.7rem;max-height:3rem;width:12rem;object-fit:contain;">
         </a>
         <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarConsultor" aria-controls="navbarConsultor" aria-expanded="false" aria-label="Menú">
             <span class="navbar-toggler-icon"></span>
@@ -49,7 +52,15 @@
                     <a class="nav-link {{ $inf ? 'active' : '' }}" href="{{ route('panel.consultor.informes.index') }}">Informes</a>
                 </li>
             </ul>
-            <ul class="navbar-nav mb-2 mb-lg-0 ms-lg-auto">
+            <ul class="navbar-nav mb-2 mb-lg-0 ms-lg-auto align-items-lg-center">
+                <li class="nav-item me-2">
+                    <a class="nav-link py-0 position-relative" href="{{ route('panel.consultor.solicitudes.index') }}" title="Pendientes y novedades">
+                        <i class="fas fa-bell fa-lg"></i>
+                        @if ($notificacionBadgeCount > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.6rem;min-width:1.1rem;">{{ $notificacionBadgeCount > 99 ? '99+' : $notificacionBadgeCount }}</span>
+                        @endif
+                    </a>
+                </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="perfilDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-user-circle me-2"></i>{{ $u->usuario }}

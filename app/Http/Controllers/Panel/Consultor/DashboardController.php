@@ -5,23 +5,18 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Panel\Consultor;
 
 use App\Http\Controllers\Controller;
-use App\Models\Cliente;
-use App\Models\Proveedor;
-use App\Models\Solicitud;
-use App\Models\SolicitudUsuario;
-use App\Models\Usuario;
+use App\Services\Panel\ConsultorDashboardService;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(): View
+    public function __construct(
+        private readonly ConsultorDashboardService $dashboard,
+    ) {}
+
+    public function index(Request $request): View
     {
-        return view('panel.consultor.dashboard', [
-            'countUsuarios' => Usuario::query()->where('activo', 1)->count(),
-            'countClientes' => Cliente::query()->where('activo', 1)->count(),
-            'countAsociados' => Proveedor::query()->count(),
-            'countSolicitudesActivas' => Solicitud::query()->where('activo', 1)->count(),
-            'countSolicitudesUsuarioPendientes' => SolicitudUsuario::query()->where('estado', 'Pendiente')->count(),
-        ]);
+        return view('panel.consultor.dashboard', $this->dashboard->build($request));
     }
 }
