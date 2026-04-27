@@ -19,13 +19,6 @@
     $f = $filtros ?? [];
 @endphp
 <div class="panel-consultor-home">
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-        <div>
-            <h1 class="fw-light mb-1" style="font-size:1.75rem;">Inicio</h1>
-            <p class="text-muted small mb-0">Resumen de solicitudes y accesos (vista alineada al panel legado).</p>
-        </div>
-    </div>
-
     <form method="get" action="{{ route('panel.consultor.inicio') }}" class="dashboard-filters p-3 mb-3">
         <div class="row g-2 small align-items-end">
             <div class="col-12 col-md-6 col-xl-2">
@@ -231,39 +224,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <div class="row g-2 g-md-3">
-        <div class="col-6 col-md-4 col-lg-2">
-            <a href="{{ route('panel.consultor.usuarios.index') }}" class="d-block p-2 p-md-3 text-center text-decoration-none stat-tile bg-white h-100 small text-body">
-                <i class="fas fa-users d-block text-primary fs-4 mb-1"></i>Usuarios
-            </a>
-        </div>
-        <div class="col-6 col-md-4 col-lg-2">
-            <a href="{{ route('panel.consultor.clientes.index') }}" class="d-block p-2 p-md-3 text-center text-decoration-none stat-tile bg-white h-100 small text-body">
-                <i class="fas fa-building d-block text-primary fs-4 mb-1"></i>Clientes
-            </a>
-        </div>
-        <div class="col-6 col-md-4 col-lg-2">
-            <a href="{{ route('panel.consultor.asociados.index') }}" class="d-block p-2 p-md-3 text-center text-decoration-none stat-tile bg-white h-100 small text-body">
-                <i class="fas fa-handshake d-block text-primary fs-4 mb-1"></i>Asociados
-            </a>
-        </div>
-        <div class="col-6 col-md-4 col-lg-2">
-            <a href="{{ route('panel.consultor.solicitudes.index') }}" class="d-block p-2 p-md-3 text-center text-decoration-none stat-tile bg-white h-100 small text-body">
-                <i class="fas fa-clipboard-list d-block text-primary fs-4 mb-1"></i>Confiabilidad
-            </a>
-        </div>
-        <div class="col-6 col-md-4 col-lg-2">
-            <a href="{{ route('panel.consultor.solicitudes-usuarios.index') }}" class="d-block p-2 p-md-3 text-center text-decoration-none stat-tile bg-white h-100 small text-body">
-                <i class="fas fa-user-cog d-block text-primary fs-4 mb-1"></i>Usuarios (sol.)
-            </a>
-        </div>
-        <div class="col-6 col-md-4 col-lg-2">
-            <a href="{{ route('panel.consultor.informes.index') }}" class="d-block p-2 p-md-3 text-center text-decoration-none stat-tile bg-white h-100 small text-body">
-                <i class="fas fa-chart-bar d-block text-primary fs-4 mb-1"></i>Informes
-            </a>
         </div>
     </div>
 </div>

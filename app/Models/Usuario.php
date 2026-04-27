@@ -59,6 +59,7 @@ class Usuario extends Authenticatable
     protected function casts(): array
     {
         return [
+            'fecha_insert' => 'date',
             'activo' => 'integer',
             'permiso_ver_documentos' => 'boolean',
             'permiso_subir_documentos' => 'boolean',

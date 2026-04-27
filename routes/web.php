@@ -9,6 +9,8 @@ use App\Http\Controllers\Panel\Consultor\AsociadosController;
 use App\Http\Controllers\Panel\Consultor\ClientesController;
 use App\Http\Controllers\Panel\Consultor\DashboardController;
 use App\Http\Controllers\Panel\Consultor\InformesController;
+use App\Http\Controllers\Panel\Consultor\NotificacionConsultorController;
+use App\Http\Controllers\Panel\Consultor\PerfilController;
 use App\Http\Controllers\Panel\Consultor\SolicitudController as ConsultorSolicitudController;
 use App\Http\Controllers\Panel\Consultor\SolicitudesUsuarioController;
 use App\Http\Controllers\Panel\Consultor\UsuariosController;
@@ -35,6 +37,9 @@ Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')-
 Route::middleware(['auth', 'role:2,3'])->prefix('panel/consultor')->name('panel.consultor.')->group(function () {
     Route::redirect('/', '/panel/consultor/inicio');
     Route::get('inicio', [DashboardController::class, 'index'])->name('inicio');
+    Route::get('perfil', [PerfilController::class, 'show'])->name('perfil.show');
+    Route::put('perfil', [PerfilController::class, 'update'])->name('perfil.update');
+    Route::post('notificaciones/marcar-leidas', [NotificacionConsultorController::class, 'marcarLeidas'])->name('notificaciones.marcar-leidas');
     Route::get('informes', [InformesController::class, 'index'])->name('informes.index');
     Route::get('informes/exportar', [InformesController::class, 'export'])->name('informes.export');
 

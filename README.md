@@ -51,7 +51,7 @@ El login usa la tabla `t_usuarios` (modelo `App\Models\Usuario`). Los roles sigu
 
 Resumen de paneles:
 
-- **Consultor / admin SJ** (roles 2, 3): prefijo ` /panel/consultor` — inicio, usuarios, clientes, asociados, confiabilidad, solicitudes de gestión de usuarios (`t_solicitudes_usuario`), informes, detalle y asignación a proveedor donde aplique.
+- **Consultor / admin SJ** (roles 2, 3): prefijo ` /panel/consultor` — inicio (dashboard), mi perfil, usuarios, clientes, asociados, confiabilidad, solicitudes de gestión de usuarios (`t_solicitudes_usuario`), informes, detalle y asignación a proveedor donde aplique, modal de notificaciones.
 - **Cliente** (1, 4, 5): ` /panel/cliente`
 - **Proveedor** (6): ` /panel/proveedor`
 
@@ -66,6 +66,8 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 | Usuarios | listado (orden, búsqueda, paginación); **crear y editar en modales** sobre el listado; reglas de roles alineadas al legado (admin 2 no edita superadmin 3 ni asigna roles SJ sin permisos) | `UsuarioPolicy` |
 | Solicitudes de usuarios | listado, responder aprobar/rechazar con comentario | `SolicitudUsuarioPolicy` |
 | Informes (solicitudes) | listado con filtros y paginación; exportación CSV (simil Excel) | `SolicitudPolicy` |
+| Mi perfil | datos personales (`t_persona`), modal *Actualizar datos* | (usuario autenticado) |
+| Notificaciones (panel) | modal desde campana: lista `notificaciones` por `rol_destino`, marcar leídas | (usuario rol 2/3) |
 | Solicitudes de confiabilidad | gestión (listado), detalle/asignación | `SolicitudPolicy` |
 
 - **Form requests:** `app/Http/Requests/Catalog/` (alta/edición y respuesta de solicitudes de usuario).
@@ -105,12 +107,29 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 - **Vista** `resources/views/panel/consultor/informes/index.blade.php`: título *Informes de Solicitudes*, acciones *Filtrar* y *Exportar a Excel*, tabla con columnas Cliente, Documento, Nombres, Fecha creación, Estado (badges) y Servicio, estilo cebra y pie con rango de resultados mostrado.
 - **Código:** `app/Http/Controllers/Panel/Consultor/InformesController.php` (`index`, `export`, `buildInformesQuery`).
 
+#### Mi perfil (consultor)
+
+- **Rutas:** `GET /panel/consultor/perfil`, `PUT /panel/consultor/perfil` (datos de `t_persona` vinculada al usuario).
+- **Código:** `PerfilController`, `UpdatePerfilPropioRequest`, `PerfilPropioService`, vista `resources/views/panel/consultor/perfil/show.blade.php` (tarjeta y modal, vista previa de foto en cliente; sin persistencia de imagen en BD en esta fase).
+- En el menú de usuario, enlace *Mi Perfil*; el nombre en barra superior usa datos de persona cuando existen.
+
+#### Notificaciones (consultor, modal)
+
+- **Ruta:** `POST /panel/consultor/notificaciones/marcar-leidas` (IDs seleccionados o lógica de marcar leídas en `t_notificaciones` filtrada por `rol_destino`).
+- **Modelo** `app/Models/Notificacion.php` (`notificaciones`). **Servicio** `NotificacionConsultorService`, **controlador** `NotificacionConsultorController`. Vista `layouts/partials/modal-notificaciones-consultor.blade.php` incluida desde el navbar del consultor.
+- El distintivo de la campana suma: notificaciones no leídas del rol + solicitudes *Nuevo* + solicitudes de usuario *Pendiente* (ver `AppServiceProvider`).
+
 #### Inicio (dashboard) consultor
 
-- Ruta: `GET /panel/consultor/inicio` — datos y gráficos respetan **filtros GET** (empresa/cliente, servicio, estado, rango de fechas).
-- **Cuatro gráficos** (Chart.js vía CDN): dona *Solicitudes por estado*, barras agrupadas *Solicitudes por servicio* (paquetes vs servicios individuales), dona *Solicitudes por empresa*, evolución mensual (dos series: paquetes vs individuales). Debajo, **dos tablas** (*Solicitudes recientes* y *Peticiones de usuarios*) y accesos rápidos a módulos.
+- Ruta: `GET /panel/consultor/inicio` — datos y gráficos respetan **filtros GET** (empresa/cliente, servicio, estado, rango de fechas). La vista no muestra título “Inicio” ni bloque de accesos rápidos al final; entra con filtros, KPI, gráficos y tablas recientes.
+- **Cuatro gráficos** (Chart.js vía CDN): dona *Solicitudes por estado*, barras agrupadas *Solicitudes por servicio* (paquetes vs servicios individuales), dona *Solicitudes por empresa*, evolución mensual (dos series: paquetes vs individuales). Debajo, **dos tablas** (*Solicitudes recientes* y *Peticiones de usuarios*).
 - Lógica de agregación: `app/Services/Panel/ConsultorDashboardService.php`.
-- Barra superior: icono de notificaciones con distintivo (solicitudes en estado *Nuevo* + solicitudes de usuario *Pendiente*). Pie de página corporativo en el layout del consultor.
+- Barra superior: logo en header `public/images/Logo Sj Confiable-02.png` (navbars autenticados), icono de notificaciones con distintivo (ver sección notificaciones). Pie de página corporativo en el layout del consultor.
+
+#### Tipografía (panel, CSS legado)
+
+- `plantilla.css`: `body` con ligero incremento de tamaño heredado; navbar y desplegables con tamaños en `rem` (p. ej. enlaces de menú ~1.1rem).
+- `panel-tables-laravel.css` y `tablas-optimizadas.css`: celdas de tablas y cabeceras con tamaños ligeramente mayores que la escala mínima original (~0.875rem / ~0.9375rem) para legibilidad.
 
 ### Acceso público y login
 
@@ -128,9 +147,9 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 
 ## Estructura relevante (código)
 
-- `app/Http/Controllers/Panel/Consultor/`: controladores del panel consultor
+- `app/Http/Controllers/Panel/Consultor/`: controladores del panel consultor (incl. `PerfilController`, `NotificacionConsultorController`, `InformesController`)
 - `app/Http/Requests/Catalog/`: validación de catálogos (consultor); en **usuarios**, **clientes** y **asociados**, los *Form requests* de alta/edición usan `failedValidation` para volver al listado y reabrir el modal correspondiente cuando hay errores.
-- `app/Models/`: modelos Eloquent mapeando tablas legado (`solicitudes`, `t_usuarios`, `t_clientes`, `t_proveedores`, etc.)
+- `app/Models/`: modelos Eloquent mapeando tablas legado (`solicitudes`, `t_usuarios`, `t_clientes`, `t_proveedores`, `notificaciones`, etc.)
 - `app/Policies/`: `SolicitudPolicy`, `ClientePolicy`, `ProveedorPolicy`, `UsuarioPolicy`, `SolicitudUsuarioPolicy`, y `Policies/Concerns/AuthorizesSJStaff`
 - `app/Services/Solicitud/`: lógica de listados y asignación a asociado
 - `app/Repositories/Contracts/SolicitudRepository.php` y `EloquentSolicitudRepository.php`: listados y `paginateForConsultor` (búsqueda y orden)
@@ -139,6 +158,8 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 - `public/images/pdf.png`: icono de documentos en el listado (referencia al legado)
 - `app/Services/Catalog/`: lógica de clientes, proveedores, usuarios y respuesta a solicitudes de usuario
 - `app/Services/Panel/ConsultorDashboardService.php`: dashboard consultor (KPI, gráficos, tablas recientes)
+- `app/Services/Panel/PerfilPropioService.php`, `app/Services/Panel/NotificacionConsultorService.php`
+- `resources/views/panel/consultor/perfil/`, `resources/views/layouts/partials/modal-notificaciones-consultor.blade.php`
 - `config/sj.php`: URLs opcionales (login: WhatsApp, redes, olvidé contraseña)
 - `public/css/legacy/`: hojas de estilo copiadas/adaptadas del sistema anterior (`plantilla.css`, tablas, etc.)
 - `database/sql/bootstrap_legacy.sql`: volcado de referencia local (no sustituye un backup de producción)

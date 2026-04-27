@@ -3,6 +3,8 @@ body {
     background: #f8f9fa;
     font-family: 'Exo', sans-serif;
     color: #333;
+    /* Texto heredado ligeramente mayor (párrafos, celdas sin rem fijo) sin tocar el rem raíz */
+    font-size: 1.05rem;
     padding-top: 60px; /* Reducido para eliminar espacio excesivo */
 }
 

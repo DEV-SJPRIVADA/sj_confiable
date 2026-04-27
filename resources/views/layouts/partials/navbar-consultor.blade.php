@@ -1,7 +1,22 @@
 @php
     $u = auth()->user();
-    $logoNavbar = asset('images/logo-sj-confiable.png');
-    $logoNavbar .= is_file(public_path('images/logo-sj-confiable.png')) ? '?v='.filemtime(public_path('images/logo-sj-confiable.png')) : '';
+    if ($u && ! $u->relationLoaded('persona')) {
+        $u->load('persona');
+    }
+    $etiquetaUsuarioNavbar = $u && $u->persona
+        ? trim(implode(' ', array_filter([
+            $u->persona->nombre,
+            $u->persona->paterno,
+            trim((string) ($u->persona->materno ?? '')) !== '' ? trim((string) $u->persona->materno) : null,
+        ])))
+        : (string) ($u?->usuario ?? '');
+    if ($etiquetaUsuarioNavbar === '' && $u) {
+        $etiquetaUsuarioNavbar = (string) $u->usuario;
+    }
+    $headerLogoRel = 'images/Logo Sj Confiable-02.png';
+    $headerLogoPath = public_path($headerLogoRel);
+    $logoNavbar = asset($headerLogoRel);
+    $logoNavbar .= is_file($headerLogoPath) ? '?v='.filemtime($headerLogoPath) : '';
     $notificacionBadgeCount = $notificacionBadgeCount ?? 0;
     $r = 'panel.consultor.';
     $inicio = request()->routeIs($r.'inicio');
@@ -54,7 +69,13 @@
             </ul>
             <ul class="navbar-nav mb-2 mb-lg-0 ms-lg-auto align-items-lg-center">
                 <li class="nav-item me-2">
-                    <a class="nav-link py-0 position-relative" href="{{ route('panel.consultor.solicitudes.index') }}" title="Pendientes y novedades">
+                    <a
+                        class="nav-link py-0 position-relative"
+                        href="#"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalNotificacionesConsultor"
+                        title="Notificaciones"
+                    >
                         <i class="fas fa-bell fa-lg"></i>
                         @if ($notificacionBadgeCount > 0)
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.6rem;min-width:1.1rem;">{{ $notificacionBadgeCount > 99 ? '99+' : $notificacionBadgeCount }}</span>
@@ -63,11 +84,19 @@
                 </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="perfilDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-user-circle me-2"></i>{{ $u->usuario }}
+                        <i class="fas fa-user-circle me-2"></i>{{ $etiquetaUsuarioNavbar }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end custom-dropdown" aria-labelledby="perfilDropdown">
-                        <li><span class="dropdown-item text-white-50"><i class="fas fa-id-badge me-2 text-info"></i>Mi Perfil (próximamente)</span></li>
-                        <li><span class="dropdown-item text-white-50"><i class="fas fa-bell me-2 text-warning"></i>Notificaciones (próximamente)</span></li>
+                        <li>
+                            <a class="dropdown-item" href="{{ route('panel.consultor.perfil.show') }}">
+                                <i class="fas fa-id-badge me-2 text-info"></i>Mi Perfil
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalNotificacionesConsultor">
+                                <i class="fas fa-bell me-2 text-warning"></i>Notificaciones
+                            </a>
+                        </li>
                         <li><hr class="dropdown-divider border-white border-opacity-25"></li>
                         <li>
                             <form method="post" action="{{ route('logout') }}" class="d-inline w-100">
@@ -81,3 +110,4 @@
         </div>
     </div>
 </nav>
+@include('layouts.partials.modal-notificaciones-consultor')

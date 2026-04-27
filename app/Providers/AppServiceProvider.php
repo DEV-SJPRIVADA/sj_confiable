@@ -14,6 +14,7 @@ use App\Policies\SolicitudUsuarioPolicy;
 use App\Policies\UsuarioPolicy;
 use App\Repositories\Contracts\SolicitudRepository;
 use App\Repositories\Eloquent\EloquentSolicitudRepository;
+use App\Services\Panel\NotificacionConsultorService;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
@@ -38,7 +39,16 @@ class AppServiceProvider extends ServiceProvider
         View::composer('layouts.partials.navbar-consultor', function ($view): void {
             $pendUsu = SolicitudUsuario::query()->where('estado', 'Pendiente')->count();
             $nuevasSol = Solicitud::query()->where('activo', 1)->where('estado', 'Nuevo')->count();
-            $view->with('notificacionBadgeCount', $pendUsu + $nuevasSol);
+            $notifSvc = app(NotificacionConsultorService::class);
+            $u = auth()->user();
+            $notifNuevas = 0;
+            $notifLista = collect();
+            if ($u instanceof Usuario && in_array((int) $u->id_rol, [2, 3], true)) {
+                $notifNuevas = $notifSvc->contarNoLeidas($u);
+                $notifLista = $notifSvc->listarParaUsuario($u);
+            }
+            $view->with('notificacionBadgeCount', $notifNuevas + $pendUsu + $nuevasSol);
+            $view->with('notificacionesConsultor', $notifLista);
         });
     }
 }

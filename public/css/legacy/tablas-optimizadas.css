@@ -27,7 +27,7 @@
 
 /* Optimización general para todas las DataTables */
 .dataTable {
-    font-size: 0.813rem !important; /* ~13px */
+    font-size: 0.875rem !important; /* ~14px */
 }
 
 /* Compacta filas de todas las tablas */
@@ -70,7 +70,7 @@
 .btn-success,
 .btn-info {
     padding: 8px 18px;
-    font-size: 0.938rem; /* ~15px */
+    font-size: 1rem; /* ~16px */
     font-weight: 500;
 }
 
@@ -104,14 +104,14 @@
     .btn-success,
     .btn-info {
         padding: 7px 15px;
-        font-size: 0.875rem; /* ~14px en portátiles */
+        font-size: 0.9375rem; /* ~15px en portátiles */
     }
 }
 
 /* Para monitores grandes (≥1600px) - tamaños más generosos */
 @media (min-width: 1600px) {
     .dataTable {
-        font-size: 0.875rem !important; /* ~14px en monitores grandes */
+        font-size: 0.9375rem !important; /* ~15px en monitores grandes */
     }
     
     .dataTable tbody th,
@@ -134,14 +134,14 @@
     }
     
     .dataTable {
-        font-size: 0.75rem !important; /* ~12px en móviles */
+        font-size: 0.8125rem !important; /* ~13px en móviles */
     }
     
     .btn-primary,
     .btn-success,
     .btn-info {
         padding: 4px 10px;
-        font-size: 0.75rem;
+        font-size: 0.875rem;
     }
 }
 

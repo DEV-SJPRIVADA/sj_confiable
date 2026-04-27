@@ -1,10 +1,14 @@
 @php
     $u = auth()->user();
+    $headerLogoRel = 'images/Logo Sj Confiable-02.png';
+    $headerLogoPath = public_path($headerLogoRel);
+    $logoNavbar = asset($headerLogoRel);
+    $logoNavbar .= is_file($headerLogoPath) ? '?v='.filemtime($headerLogoPath) : '';
 @endphp
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top large-navbar">
     <div class="container-fluid position-relative">
         <a class="navbar-brand d-flex align-items-center" href="{{ url('/') }}">
-            <img src="{{ asset('images/logo-sj-confiable.png') }}" alt="SJ Confiable" class="navbar-logo me-2" style="height:2.7rem;max-height:3rem;width:12rem;object-fit:contain;">
+            <img src="{{ $logoNavbar }}" alt="SJ Confiable" class="navbar-logo me-2" style="height:2.7rem;max-height:3rem;width:12rem;object-fit:contain;">
         </a>
         <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarProv" aria-controls="navbarProv" aria-expanded="false" aria-label="Menú">
             <span class="navbar-toggler-icon"></span>
