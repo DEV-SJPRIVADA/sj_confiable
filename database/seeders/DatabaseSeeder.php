@@ -15,7 +15,9 @@ class DatabaseSeeder extends Seeder
             return;
         }
 
-        $this->call(LegacySchemaImportSeeder::class);
+        $this->call(LegacyCatalogSeeder::class);
+        $this->call(LegacyIdentitySeeder::class);
+        $this->call(LegacyOperationalDataSeeder::class);
 
         if ((bool) env('SEED_DEV_PASSWORDS', true)) {
             $this->call(LocalDevPasswordSeeder::class);

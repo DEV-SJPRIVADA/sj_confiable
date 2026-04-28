@@ -149,7 +149,10 @@ class UsuariosController extends Controller
     {
         $this->authorize('create', Usuario::class);
         $actor = $this->authed();
-        Gate::forUser($actor)->authorize('assignRoleOnCreate', (int) $request->input('id_rol'));
+        Gate::forUser($actor)->authorize('assignRoleOnCreate', [
+            Usuario::class,
+            (int) $request->input('id_rol'),
+        ]);
 
         $data = $this->payloadCrearOActualizar($request, true);
         $data['creado_por'] = (int) $actor->id_usuario;

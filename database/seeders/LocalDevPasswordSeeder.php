@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * Unifica la contraseña de usuarios de prueba (ids del dump bootstrap_legacy.sql) para login local.
+ * Unifica la contraseña de usuarios de prueba (ids 1–7 sembrados por LegacyIdentitySeeder) para login local.
  * Usa .env: SEED_ADMIN_PASSWORD (nunca en producción con datos reales).
  */
 class LocalDevPasswordSeeder extends Seeder

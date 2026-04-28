@@ -1,11 +1,5 @@
 @php
     $idPrefix = $idPrefix ?? 'panel-solicitud';
-    $nombreServicios = function ($s) {
-        if ($s->serviciosPivote->isNotEmpty()) {
-            return $s->serviciosPivote->pluck('nombre')->implode(', ');
-        }
-        return $s->servicio?->nombre ?? '—';
-    };
 @endphp
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-header bg-white fw-bold text-primary">Solicitud #{{ $solicitud->id }} — <span class="text-body">{{ $solicitud->estado }}</span></div>
@@ -13,7 +7,7 @@
         <div class="row small">
             <div class="col-md-4 mb-2"><span class="text-muted">Evaluado</span><br>{{ $solicitud->nombres }} {{ $solicitud->apellidos }}</div>
             <div class="col-md-4 mb-2"><span class="text-muted">Documento</span><br>{{ $solicitud->tipo_identificacion }} {{ $solicitud->numero_documento }}</div>
-            <div class="col-md-4 mb-2"><span class="text-muted">Servicio(s)</span><br>{{ $nombreServicios($solicitud) }}</div>
+            <div class="col-md-4 mb-2"><span class="text-muted">Servicio(s)</span><br>{{ $solicitud->labelServiciosContratados() }}</div>
             <div class="col-md-4 mb-2"><span class="text-muted">Usuario creador</span><br>{{ $solicitud->creador?->usuario ?? '—' }}</div>
             <div class="col-md-4 mb-2"><span class="text-muted">Cliente (razón social)</span><br>{{ $solicitud->creador?->cliente?->razon_social ?? '—' }}</div>
             <div class="col-md-4 mb-2"><span class="text-muted">Proveedor asignado</span><br>{{ $solicitud->proveedorAsignado?->nombre_comercial ?? $solicitud->proveedorAsignado?->razon_social_proveedor ?? '—' }}</div>

@@ -147,6 +147,24 @@ final class EloquentSolicitudRepository implements SolicitudRepository
             ->findOrFail($id);
     }
 
+    public function findForEstadoCliente(int $id): Solicitud
+    {
+        return Solicitud::query()
+            ->with([
+                'creador.cliente',
+                'creador.persona',
+                'proveedorAsignado',
+                'servicio',
+                'serviciosPivote',
+                'paquete',
+                'documentos',
+                'historialRespuestas.usuario.proveedor',
+                'respuestasMadre.usuario.persona',
+                'respuestasMadre.documentos',
+            ])
+            ->findOrFail($id);
+    }
+
     /**
      * Equivalente a `GestionSolicitud::obtenerSolicitudes` (conteos y relaciones).
      */

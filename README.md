@@ -26,10 +26,9 @@ Configurar en `.env` la conexión a MySQL (`DB_*`) y, si aplica, `APP_URL`.
 
 ### Base de datos (entorno local)
 
-- Ejecutar migraciones si existen: `php artisan migrate`
-- En **local** (`APP_ENV=local`), el `DatabaseSeeder` puede:
-  - Importar `database/sql/bootstrap_legacy.sql` si no existe aún `t_usuarios` (controlado por `RUN_LEGACY_SQL_IMPORT`)
-  - Unificar contraseñas de prueba con `LocalDevPasswordSeeder` (variables `SEED_DEV_PASSWORDS` y `SEED_ADMIN_PASSWORD`)
+- Ejecutar migraciones: `php artisan migrate` (esquema alineado al legado SJ)
+- En **local** (`APP_ENV=local`), `php artisan db:seed` ejecuta `LegacyCatalogSeeder`, `LegacyIdentitySeeder` (datos mínimos de prueba) y, si aplica, `LocalDevPasswordSeeder` (`SEED_DEV_PASSWORDS`, `SEED_ADMIN_PASSWORD`)
+- Opcional: con `RUN_LEGACY_SQL_IMPORT=true`, import único desde `database/archive/bootstrap_legacy.sql` solo si aún no existe `t_usuarios` (mysql/mariadb local)
 
 ```bash
 php artisan db:seed
@@ -41,9 +40,20 @@ php artisan db:seed
 
 | Variable | Descripción |
 |----------|-------------|
-| `RUN_LEGACY_SQL_IMPORT` | `true`/`false`: importa el SQL de referencia al seedear (solo local, driver mysql/mariadb) |
+| `RUN_LEGACY_SQL_IMPORT` | `true`/`false`: import opcional del volcado archivado (solo local, mysql/mariadb, sin `t_usuarios` previa; por defecto `false`) |
 | `SEED_DEV_PASSWORDS` | Activa el seeder de contraseñas de prueba para ids de usuario definidos en el seeder |
 | `SEED_ADMIN_PASSWORD` | Contraseña en texto plano (solo dev) usada para generar el hash con `Hash::make` en usuarios de prueba |
+| `SEED_LEGACY_OPERATIONAL` | `true`/`false`: datos operativos demo (solicitudes, respuestas, notificaciones) vía `LegacyOperationalDataSeeder` (por defecto `true` en `.env.example`) |
+
+#### Migraciones y semillas (sin import SQL obligatorio)
+
+- **Esquema:** las migraciones `2026_04_24_*` crean tablas de framework (sesiones, caché, colas) y el **esquema legado SJ** en orden de dependencias (`t_cat_*`, `solicitudes`, `notificaciones`, `t_solicitudes_usuario`, etc.).
+- **Semillas locales** (`APP_ENV=local`, `php artisan db:seed`):
+  - `LegacyCatalogSeeder`: roles, catálogo de servicios, paquetes (incl. id 22 de referencia).
+  - `LegacyIdentitySeeder`: clientes, personas, proveedor y usuarios de prueba (ids coherentes con el dump archivado).
+  - `LegacyOperationalDataSeeder` (si `SEED_LEGACY_OPERATIONAL=true`): solicitudes, respuestas, documentos de respuesta, notificaciones y solicitud de usuario; paridad con `database/archive/bootstrap_legacy.sql` para desarrollo.
+  - `LocalDevPasswordSeeder` (si `SEED_DEV_PASSWORDS=true`): unifica contraseñas según `SEED_ADMIN_PASSWORD`.
+- **Opcional:** `RUN_LEGACY_SQL_IMPORT=true` ejecuta **una sola vez** el import de `database/archive/bootstrap_legacy.sql` (solo si no existe `t_usuarios`; MySQL/MariaDB local). El flujo recomendado es `migrate` + `db:seed`.
 
 ## Autenticación y roles
 
@@ -52,7 +62,7 @@ El login usa la tabla `t_usuarios` (modelo `App\Models\Usuario`). Los roles sigu
 Resumen de paneles:
 
 - **Consultor / admin SJ** (roles 2, 3): prefijo ` /panel/consultor` — inicio (dashboard), mi perfil, usuarios, clientes, asociados, confiabilidad, solicitudes de gestión de usuarios (`t_solicitudes_usuario`), informes, detalle y asignación a proveedor donde aplique, modal de notificaciones.
-- **Cliente** (1, 4, 5): ` /panel/cliente`
+- **Cliente** (1, 4, 5): ` /panel/cliente` — inicio con filtros y gráficos (Chart.js), listado de solicitudes, **vista Estado de solicitud** (equivalente legado *ResultadoSolicitud*), alta/edición de solicitud, anulación y perfil; iconos de acciones alineados al legado (estado, ver detalle, adjuntos, editar, anular) con políticas en `SolicitudPolicy`.
 - **Proveedor** (6): ` /panel/proveedor`
 
 ### Panel consultor: catálogos y permisos
@@ -131,6 +141,21 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 - `plantilla.css`: `body` con ligero incremento de tamaño heredado; navbar y desplegables con tamaños en `rem` (p. ej. enlaces de menú ~1.1rem).
 - `panel-tables-laravel.css` y `tablas-optimizadas.css`: celdas de tablas y cabeceras con tamaños ligeramente mayores que la escala mínima original (~0.875rem / ~0.9375rem) para legibilidad.
 
+#### Panel cliente — solicitudes e inicio
+
+| Ruta (resumen) | Descripción |
+|-----------------|-------------|
+| `GET /panel/cliente/inicio` | Dashboard cliente: filtros (estado, fechas, búsqueda), gráficos (estados, servicios, ciudades, evolución) y tabla *Solicitudes de confiabilidad*. |
+| `GET /panel/cliente/solicitudes` | Listado tipo legado (`listaEstilo cliente-legacy`); columna **Acciones** con enlace a estado, detalle, `#documentos`, editar y anular según política. |
+| `GET /panel/cliente/solicitudes/{id}/estado` | **Estado de solicitud** (primer icono portapapeles ✓): detalle izquierdo, documentos relacionados (`id="documentos"`), historial de respuestas tipo timeline. |
+| `GET /panel/cliente/solicitudes/{id}` | Detalle compacto (`_detalle` / fragmentos documentos + historial). |
+| `GET/POST` crear y `PUT` editar solicitud | Formularios alineados al legado; solo edición si `estado === Registrado` y permisos. |
+| `POST …/cancelar` | Anula solicitud (`Cancelado`, `activo = 0`) con confirmación; política `cancel`. |
+
+- **Partial compartido:** `resources/views/panel/partials/_cliente-acciones-solicitud-inner.blade.php` y estilos `_styles-cliente-acciones-solicitud.blade.php` (Inicio + listado Solicitudes).
+- **Código:** `ClienteInicioController`, `ClienteInicioService`, `ClienteSolicitudController`, `ClienteSolicitudCreacionService`, `ClienteSolicitudActualizacionService`, `ClienteSolicitudCancelacionService`, `ImportacionMasivaController`, `PerfilController`; requests `StoreClienteSolicitudRequest`, `UpdateClienteSolicitudRequest`.
+- **Repositorio:** `SolicitudRepository::findForDetalle`, `findForEstadoCliente`.
+
 ### Acceso público y login
 
 - La ruta `/` **no** usa la plantilla `welcome` de Laravel: redirige a `/login` (invitado) o al *home* del rol (`App\Domain\Routing\RoleHome`) si hay sesión.
@@ -162,7 +187,9 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 - `resources/views/panel/consultor/perfil/`, `resources/views/layouts/partials/modal-notificaciones-consultor.blade.php`
 - `config/sj.php`: URLs opcionales (login: WhatsApp, redes, olvidé contraseña)
 - `public/css/legacy/`: hojas de estilo copiadas/adaptadas del sistema anterior (`plantilla.css`, tablas, etc.)
-- `database/sql/bootstrap_legacy.sql`: volcado de referencia local (no sustituye un backup de producción)
+- `database/archive/bootstrap_legacy.sql`: volcado de referencia (no sustituye un backup de producción; el flujo normal es migrate + seed).
+- `database/migrations/2026_04_24_*.php`: esquema Laravel + legado SJ.
+- `resources/views/panel/cliente/`: inicio, solicitudes (index, create, edit, estado, show), importar, partials de acciones.
 
 ## Pruebas
 

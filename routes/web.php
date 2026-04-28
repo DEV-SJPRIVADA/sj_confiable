@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use App\Domain\Routing\RoleHome;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Panel\Cliente\InicioController as ClienteInicioController;
+use App\Http\Controllers\Panel\Cliente\ImportacionMasivaController as ClienteImportacionMasivaController;
+use App\Http\Controllers\Panel\Cliente\PerfilController as ClientePerfilController;
 use App\Http\Controllers\Panel\Cliente\SolicitudController as ClienteSolicitudController;
 use App\Http\Controllers\Panel\Consultor\AsociadosController;
 use App\Http\Controllers\Panel\Consultor\ClientesController;
@@ -73,8 +76,22 @@ Route::middleware(['auth', 'role:2,3'])->prefix('panel/consultor')->name('panel.
 });
 
 Route::middleware(['auth', 'role:1,4,5'])->prefix('panel/cliente')->name('panel.cliente.')->group(function () {
-    Route::redirect('/', '/panel/cliente/solicitudes');
+    Route::redirect('/', '/panel/cliente/inicio');
+    Route::get('inicio', [ClienteInicioController::class, 'index'])->name('inicio');
+    Route::get('perfil', [ClientePerfilController::class, 'show'])->name('perfil.show');
+    Route::put('perfil', [ClientePerfilController::class, 'update'])->name('perfil.update');
+    Route::get('importar/plantilla-solicitudes', [ClienteImportacionMasivaController::class, 'plantillaSolicitudes'])->name('importar.plantilla-solicitudes');
+    Route::get('importar/plantilla-evaluados', [ClienteImportacionMasivaController::class, 'plantillaEvaluados'])->name('importar.plantilla-evaluados');
+    Route::get('importar', [ClienteImportacionMasivaController::class, 'index'])->name('importar');
+    Route::post('importar', [ClienteImportacionMasivaController::class, 'store'])->name('importar.store');
+    Route::permanentRedirect('nueva-solicitud', '/panel/cliente/solicitudes/crear');
+    Route::get('solicitudes/crear', [ClienteSolicitudController::class, 'create'])->name('solicitudes.create');
+    Route::post('solicitudes', [ClienteSolicitudController::class, 'store'])->name('solicitudes.store');
     Route::get('solicitudes', [ClienteSolicitudController::class, 'index'])->name('solicitudes.index');
+    Route::get('solicitudes/{solicitud}/estado', [ClienteSolicitudController::class, 'estado'])->name('solicitudes.estado');
+    Route::get('solicitudes/{solicitud}/editar', [ClienteSolicitudController::class, 'edit'])->name('solicitudes.edit');
+    Route::put('solicitudes/{solicitud}', [ClienteSolicitudController::class, 'update'])->name('solicitudes.update');
+    Route::post('solicitudes/{solicitud}/cancelar', [ClienteSolicitudController::class, 'cancel'])->name('solicitudes.cancel');
     Route::get('solicitudes/{solicitud}', [ClienteSolicitudController::class, 'show'])->name('solicitudes.show');
 });
 

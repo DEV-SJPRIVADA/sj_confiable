@@ -1,12 +1,6 @@
 @extends('layouts.app')
 
 @php
-    $nombreServicios = function ($s) {
-        if ($s->serviciosPivote->isNotEmpty()) {
-            return $s->serviciosPivote->pluck('nombre')->implode(', ');
-        }
-        return $s->servicio?->nombre ?? '—';
-    };
     $badgeEstado = static function (string $estado): string {
         return match (true) {
             strcasecmp($estado, 'Nuevo') === 0 => 'bg-secondary text-white',
@@ -108,7 +102,7 @@
                     <td>
                         <span class="badge rounded-pill {{ $badgeEstado((string) ($s->estado ?? '')) }}">{{ $s->estado ?? '—' }}</span>
                     </td>
-                    <td>{{ $nombreServicios($s) }}</td>
+                    <td>{{ $s->labelServiciosContratados() }}</td>
                 </tr>
             @empty
                 <tr>

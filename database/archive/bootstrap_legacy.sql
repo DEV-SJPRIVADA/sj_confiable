@@ -433,7 +433,8 @@ INSERT INTO `t_paquetes_servicio` (`id`, `nombre`, `descripcion`) VALUES
 (9, 'Estudio de confiabilidad hoja de vida completo con visita presencial y poligrafia pre-empleo', 'Verificacion laboral, academica, personal, verificacion en base de datos especiales, Visita domiciliaria presencial, poligrafia de pre-empleo\n'),
 (10, 'Estudio de confiabilidad hoja de vida completo con visita virtual y poligrafia pre-empleo', 'Verificacion laboral, academica, personal, verificacion en base de datos especiales, Visita domiciliaria virtual, poligrafia de pre-empleo\r\n'),
 (11, 'Estudio de confiabilidad hoja de vida completo con visita online y poligrafia VSA', 'Verificacion laboral, academica, personal, verificacion en base de datos especiales, visita domiciliaria virtual, poligrafia VSA'),
-(12, 'Estudio de confiabilidad hoja de vida completo con visita presencial y poligrafia VSA', 'Verificacion laboral, academica, personal, verificacion en base de datos especiales, visita domiciliaria presencial, poligrafia VSA');
+(12, 'Estudio de confiabilidad hoja de vida completo con visita presencial y poligrafia VSA', 'Verificacion laboral, academica, personal, verificacion en base de datos especiales, visita domiciliaria presencial, poligrafia VSA'),
+(22, 'Estudio de confiabilidad hoja de vida completo con visita virtual y poligrafia pre-empleo', 'Verificacion laboral, academica, personal, verificacion en base de datos especiales, Visita domiciliaria virtual, poligrafia de pre-empleo');
 
 -- --------------------------------------------------------
 

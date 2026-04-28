@@ -25,7 +25,7 @@ final class RoleHome
             UserRole::SuperAdmin => '/panel/consultor/inicio',
             UserRole::Cliente,
             UserRole::AdminCliente,
-            UserRole::ClienteSinPermisos => '/panel/cliente/solicitudes',
+            UserRole::ClienteSinPermisos => '/panel/cliente/inicio',
             UserRole::Proveedor => '/panel/proveedor/solicitudes',
         };
     }

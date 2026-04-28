@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @php
+    $perfilUpdateRoute = $perfilUpdateRoute ?? 'panel.consultor.perfil.update';
+    $perfilTitle = $perfilTitle ?? 'Mi Perfil — Consultor';
     $nombrePantalla = trim(implode(' ', array_filter([
         $persona->nombre,
         $persona->paterno,
@@ -12,7 +14,7 @@
     $miembroDesde = $usuario->fecha_insert?->format('Y-m-d') ?? '—';
 @endphp
 
-@section('title', 'Mi Perfil — Consultor')
+@section('title', $perfilTitle)
 
 @push('styles')
 <style>
@@ -188,7 +190,7 @@
                     <h2 class="modal-title fs-6 fw-bold" id="modalPerfilDatosLabel">Actualizar Datos Personales</h2>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
-                <form method="post" action="{{ route('panel.consultor.perfil.update') }}">
+                <form method="post" action="{{ route($perfilUpdateRoute) }}">
                     @csrf
                     @method('put')
                     <div class="modal-body">

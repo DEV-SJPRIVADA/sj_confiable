@@ -11,8 +11,8 @@ use Illuminate\Support\Str;
 use PDO;
 
 /**
- * Carga estructura + datos mínimos desde database/sql/bootstrap_legacy.sql (proyecto legado 127_0_0_1).
- * Idempotente: no hace nada si ya existe t_usuarios.
+ * Rescate opcional: importa el volcado de referencia (archivado) si aún no hay datos.
+ * Flujo normal: `php artisan migrate` + `db:seed` (LegacyCatalog + LegacyIdentity).
  * Solo entorno local y driver mysql/mariadb (evita conflictos con phpunit: sqlite en memoria).
  */
 class LegacySchemaImportSeeder extends Seeder
@@ -25,7 +25,7 @@ class LegacySchemaImportSeeder extends Seeder
             return;
         }
 
-        $path = database_path('sql/bootstrap_legacy.sql');
+        $path = database_path('archive/bootstrap_legacy.sql');
         if (! is_readable($path)) {
             $this->command?->error('Falta el archivo: '.$path);
 
@@ -60,7 +60,7 @@ class LegacySchemaImportSeeder extends Seeder
             return false;
         }
 
-        if (filter_var((string) env('RUN_LEGACY_SQL_IMPORT', true), FILTER_VALIDATE_BOOL) === false) {
+        if (filter_var((string) env('RUN_LEGACY_SQL_IMPORT', false), FILTER_VALIDATE_BOOL) === false) {
             return false;
         }
 

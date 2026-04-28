@@ -48,4 +48,9 @@ interface SolicitudRepository
      * Detalle con historial y documentos (port GestionSolicitud / detalle).
      */
     public function findForDetalle(int $id): Solicitud;
+
+    /**
+     * Vista Estado de solicitud (legado ResultadoSolicitud): detalle + documentos de respuesta + historial.
+     */
+    public function findForEstadoCliente(int $id): Solicitud;
 }

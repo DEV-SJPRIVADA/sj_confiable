@@ -74,6 +74,42 @@ class Solicitud extends Model
         );
     }
 
+    /**
+     * Servicios mostrables en listados: pivote multi-servicio, servicio único o paquete.
+     * Incluye fallback por consulta directa si el paquete no llegó en el eager load (FK huérfana o datos antiguos).
+     */
+    public function labelServiciosContratados(): string
+    {
+        $this->loadMissing(['serviciosPivote', 'servicio', 'paquete']);
+
+        if ($this->serviciosPivote->isNotEmpty()) {
+            $joined = $this->serviciosPivote->pluck('nombre')->filter()->implode(', ');
+
+            if ($joined !== '') {
+                return $joined;
+            }
+        }
+
+        if ($this->servicio?->nombre) {
+            return (string) $this->servicio->nombre;
+        }
+
+        if ($this->paquete?->nombre) {
+            return (string) $this->paquete->nombre;
+        }
+
+        if ($this->paquete_id) {
+            $nom = PaqueteServicio::query()->whereKey((int) $this->paquete_id)->value('nombre');
+            if (is_string($nom) && $nom !== '') {
+                return $nom;
+            }
+
+            return 'Paquete #'.(int) $this->paquete_id;
+        }
+
+        return '—';
+    }
+
     public function historialRespuestas(): HasMany
     {
         return $this->hasMany(RespuestaSolicitud::class, 'solicitud_id', 'id')
@@ -88,6 +124,7 @@ class Solicitud extends Model
 
     public function respuestasMadre(): HasMany
     {
-        return $this->hasMany(RespuestaMadre::class, 'solicitud_id', 'id');
+        return $this->hasMany(RespuestaMadre::class, 'solicitud_id', 'id')
+            ->orderByDesc('fecha_creacion');
     }
 }
