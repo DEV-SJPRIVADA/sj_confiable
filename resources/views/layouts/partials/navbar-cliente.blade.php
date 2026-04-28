@@ -51,12 +51,34 @@
                     <a class="nav-link {{ $navSolicitudes ? 'active' : '' }}" href="{{ route('panel.cliente.solicitudes.index') }}">Solicitudes</a>
                 </li>
             </ul>
-            <ul class="navbar-nav mb-2 mb-lg-0 ms-lg-auto">
+            @php
+                $clienteNotificacionBadge = $clienteNotificacionBadge ?? 0;
+            @endphp
+            <ul class="navbar-nav mb-2 mb-lg-0 ms-lg-auto align-items-lg-center">
+                <li class="nav-item me-2">
+                    <a
+                        class="nav-link py-0 position-relative"
+                        href="#"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalNotificacionesCliente"
+                        title="Notificaciones"
+                    >
+                        <i class="fas fa-bell fa-lg"></i>
+                        @if ($clienteNotificacionBadge > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.6rem;min-width:1.1rem;">{{ $clienteNotificacionBadge > 99 ? '99+' : $clienteNotificacionBadge }}</span>
+                        @endif
+                    </a>
+                </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-user-circle me-2"></i>{{ $etiquetaUsuarioNavbar }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end custom-dropdown">
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalNotificacionesCliente">
+                                <i class="fas fa-bell me-2 text-warning"></i>Notificaciones
+                            </a>
+                        </li>
                         <li>
                             <a class="dropdown-item" href="{{ route('panel.cliente.perfil.show') }}">
                                 <i class="fas fa-id-badge me-2 text-info"></i>Mi Perfil
@@ -75,3 +97,4 @@
         </div>
     </div>
 </nav>
+@include('layouts.partials.modal-notificaciones-cliente')

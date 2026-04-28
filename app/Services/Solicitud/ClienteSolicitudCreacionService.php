@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Solicitud;
 
+use App\Domain\Enums\HistorialRespuestaCanal;
 use App\Models\Cliente;
+use App\Models\RespuestaSolicitud;
 use App\Models\Solicitud;
 use App\Models\Usuario;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +16,9 @@ use Illuminate\Support\Facades\DB;
  */
 final class ClienteSolicitudCreacionService
 {
+    public function __construct(
+        private readonly SolicitudNotificacionService $notificacionesSolicitud,
+    ) {}
     /**
      * @param  array{
      *   cliente_final: string,
@@ -39,7 +44,7 @@ final class ClienteSolicitudCreacionService
     {
         $cliente = Cliente::query()->findOrFail((int) $actor->id_cliente);
 
-        return DB::transaction(function () use ($actor, $cliente, $data): Solicitud {
+        $solicitud = DB::transaction(function () use ($actor, $cliente, $data): Solicitud {
             $paqueteId = ! empty($data['paquete_id']) ? (int) $data['paquete_id'] : null;
             $servicioIds = array_values(array_unique(array_map('intval', $data['servicio_ids'] ?? [])));
 
@@ -83,6 +88,17 @@ final class ClienteSolicitudCreacionService
 
             $solicitud->save();
 
+            $ahora = now();
+            RespuestaSolicitud::query()->create([
+                'solicitud_id' => (int) $solicitud->id,
+                'usuario_id' => (int) $actor->id_usuario,
+                'respuesta' => 'Solicitud registrada desde el panel cliente.',
+                'estado_anterior' => null,
+                'estado_actual' => 'Registrado',
+                'fecha_respuesta' => $ahora,
+                'canal' => HistorialRespuestaCanal::ClienteSj->value,
+            ]);
+
             if ($paqueteId === null && $servicioIds !== []) {
                 foreach ($servicioIds as $sid) {
                     DB::table('solicitud_servicios')->insert([
@@ -94,5 +110,12 @@ final class ClienteSolicitudCreacionService
 
             return $solicitud;
         });
+
+        $solicitudFresh = $solicitud->fresh();
+        if ($solicitudFresh !== null) {
+            $this->notificacionesSolicitud->nuevaSolicitudDesdeCliente($solicitudFresh);
+        }
+
+        return $solicitud;
     }
 }

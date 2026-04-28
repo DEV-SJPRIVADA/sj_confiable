@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Contracts;
 
+use App\Domain\Enums\HistorialRespuestaCanal;
 use App\Models\Solicitud;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -46,8 +47,9 @@ interface SolicitudRepository
 
     /**
      * Detalle con historial y documentos (port GestionSolicitud / detalle).
+     * Si se indica {@see HistorialRespuestaCanal}, el historial se filtra por audiencia (cliente vs operación SJ–proveedor).
      */
-    public function findForDetalle(int $id): Solicitud;
+    public function findForDetalle(int $id, ?HistorialRespuestaCanal $historialParaCanal = null): Solicitud;
 
     /**
      * Vista Estado de solicitud (legado ResultadoSolicitud): detalle + documentos de respuesta + historial.

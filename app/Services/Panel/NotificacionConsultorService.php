@@ -23,6 +23,7 @@ final class NotificacionConsultorService
 
         return Notificacion::query()
             ->forRol($idRol)
+            ->noLeidas()
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->limit(250)
@@ -54,7 +55,7 @@ final class NotificacionConsultorService
 
         return (int) DB::transaction(function () use ($idRol, $ids, $todas): int {
             if ($todas) {
-                return Notificacion::query()->forRol($idRol)->noLeidas()->update(['leido' => 1]);
+                return Notificacion::query()->forRol($idRol)->update(['leido' => 1]);
             }
             if ($ids === []) {
                 return 0;
@@ -65,7 +66,6 @@ final class NotificacionConsultorService
             return Notificacion::query()
                 ->forRol($idRol)
                 ->whereIn('id', $idsLimpio)
-                ->noLeidas()
                 ->update(['leido' => 1]);
         });
     }

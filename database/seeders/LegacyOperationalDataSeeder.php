@@ -283,6 +283,12 @@ final class LegacyOperationalDataSeeder extends Seeder
             ],
         ];
 
+        $filas = array_map(static function (array $r): array {
+            $r['canal'] = 'sj_proveedor';
+
+            return $r;
+        }, $filas);
+
         foreach ($filas as $row) {
             $id = $row['id'];
             unset($row['id']);

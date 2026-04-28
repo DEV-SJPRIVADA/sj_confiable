@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Eloquent;
 
+use App\Domain\Enums\HistorialRespuestaCanal;
 use App\Models\Solicitud;
 use App\Repositories\Contracts\SolicitudRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -129,7 +130,7 @@ final class EloquentSolicitudRepository implements SolicitudRepository
             ->findOrFail($id);
     }
 
-    public function findForDetalle(int $id): Solicitud
+    public function findForDetalle(int $id, ?HistorialRespuestaCanal $historialParaCanal = null): Solicitud
     {
         return Solicitud::query()
             ->with([
@@ -141,8 +142,12 @@ final class EloquentSolicitudRepository implements SolicitudRepository
                 'paquete',
                 'documentos',
                 'evaluados',
-                'historialRespuestas.usuario.proveedor',
+                'historialRespuestas' => $this->scopeHistorialEagerLoads($historialParaCanal),
                 'ultimaRespuestaMadre',
+                'respuestasMadre' => static function ($query): void {
+                    $query->orderByDesc('fecha_creacion');
+                },
+                'respuestasMadre.documentos',
             ])
             ->findOrFail($id);
     }
@@ -158,11 +163,24 @@ final class EloquentSolicitudRepository implements SolicitudRepository
                 'serviciosPivote',
                 'paquete',
                 'documentos',
-                'historialRespuestas.usuario.proveedor',
+                'historialRespuestas' => $this->scopeHistorialEagerLoads(HistorialRespuestaCanal::ClienteSj),
                 'respuestasMadre.usuario.persona',
                 'respuestasMadre.documentos',
             ])
             ->findOrFail($id);
+    }
+
+    /**
+     * @return \Closure(object):void
+     */
+    private function scopeHistorialEagerLoads(?HistorialRespuestaCanal $soloCanal): \Closure
+    {
+        return static function ($query) use ($soloCanal): void {
+            if ($soloCanal !== null) {
+                $query->where('canal', $soloCanal->value);
+            }
+            $query->orderByDesc('fecha_respuesta')->with(['usuario.proveedor']);
+        };
     }
 
     /**

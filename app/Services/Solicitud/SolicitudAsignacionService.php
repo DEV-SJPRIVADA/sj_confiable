@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Solicitud;
 
-use App\Models\NotificacionCliente;
+use App\Domain\Enums\HistorialRespuestaCanal;
 use App\Models\NotificacionProveedor;
 use App\Models\Proveedor;
 use App\Models\RespuestaSolicitud;
@@ -17,6 +17,10 @@ use Illuminate\Support\Facades\DB;
  */
 final class SolicitudAsignacionService
 {
+    public function __construct(
+        private readonly SolicitudNotificacionService $notificacionesSolicitud,
+    ) {}
+
     public function asignar(
         Solicitud $solicitud,
         int $idProveedor,
@@ -28,22 +32,21 @@ final class SolicitudAsignacionService
 
         $idSolicitud = (int) $solicitud->id;
         $tipoNombre = $solicitud->servicio?->nombre ?? 'solicitud';
-        $clienteRazon = $solicitud->creador?->cliente?->razon_social ?? '';
-        $idDestinoCliente = (int) $solicitud->usuario_id;
 
         $proveedor = Proveedor::query()->whereKey($idProveedor)->firstOrFail();
         $comercial = trim((string) ($proveedor->nombre_comercial ?? ''));
         $nombreProveedor = $comercial !== '' ? $comercial : (string) $proveedor->razon_social_proveedor;
 
+        $notificacionesSolicitud = $this->notificacionesSolicitud;
+
         DB::transaction(function () use (
             $solicitud,
+            $notificacionesSolicitud,
             $idProveedor,
             $clienteFinal,
             $tipoCliente,
             $idSolicitud,
             $tipoNombre,
-            $clienteRazon,
-            $idDestinoCliente,
             $idUsuarioActor,
             $nombreProveedor,
         ): void {
@@ -67,6 +70,7 @@ final class SolicitudAsignacionService
                 'estado_anterior' => 'Registrado',
                 'estado_actual' => 'En proceso',
                 'fecha_respuesta' => now(),
+                'canal' => HistorialRespuestaCanal::SjProveedor->value,
             ]);
 
             $mensajeCli = "Su solicitud #$idSolicitud de $tipoNombre ha recibido una nueva respuesta. Nuevo estado: En proceso.";
@@ -74,15 +78,7 @@ final class SolicitudAsignacionService
                 $mensajeCli .= " (Solicitud #$idSolicitud)";
             }
 
-            NotificacionCliente::query()->create([
-                'tipo' => $tipoNombre,
-                'cliente_nombre' => $clienteRazon !== '' ? $clienteRazon : '—',
-                'id_solicitud' => $idSolicitud,
-                'mensaje' => $mensajeCli,
-                'id_usuario_destino' => $idDestinoCliente,
-                'leido' => 0,
-                'fecha' => now(),
-            ]);
+            $notificacionesSolicitud->mensajeParaOrganizacionCliente($solicitud, $mensajeCli);
 
             $mensajeProv = "Se le ha asignado la solicitud #$idSolicitud de $tipoNombre.";
             if ($clienteFinal !== null && $clienteFinal !== '') {

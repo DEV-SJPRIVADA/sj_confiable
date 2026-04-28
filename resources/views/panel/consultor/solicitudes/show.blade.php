@@ -80,34 +80,46 @@
     </div>
 </div>
 
+@can('manageAsConsultor', $solicitud)
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white text-primary fw-bold">Nueva respuesta</div>
     <div class="card-body solicitud-nueva-respuesta">
-        <p class="text-muted small mb-3 mb-md-4">Contenido de la respuesta y anexos; el registro se reflejará en el historial al activar el envío desde el panel.</p>
-        <div class="mb-3">
-            <label for="nueva_respuesta_borrador" class="form-label fw-semibold">Respuesta</label>
-            <textarea class="form-control" id="nueva_respuesta_borrador" name="nueva_respuesta" rows="5" disabled placeholder="(Disponible cuando el envío vía panel esté activo)"></textarea>
-        </div>
-        <div class="mb-3">
-            <span class="form-label fw-semibold d-block">Documentos adjuntos (Máx. 10 PDFs)</span>
-            <div class="input-group">
-                <input type="file" class="form-control" accept=".pdf" multiple disabled aria-disabled="true" aria-label="Documentos adjuntos PDF">
+        <p class="text-muted small mb-3 mb-md-4">Escriba el mensaje que verá la organización cliente en el historial. Los PDF opcionales se guardan como documentos de la solicitud.</p>
+        @if ($errors->any())
+            <div class="alert alert-danger small mb-3" role="alert">{{ $errors->first() }}</div>
+        @endif
+        <form method="post" action="{{ route('panel.consultor.solicitudes.respuesta', $solicitud) }}" enctype="multipart/form-data" id="formNuevaRespuestaConsultor">
+            @csrf
+            <div class="mb-3">
+                <label for="nueva_respuesta_borrador" class="form-label fw-semibold">Respuesta</label>
+                <textarea class="form-control @error('nueva_respuesta') is-invalid @enderror" id="nueva_respuesta_borrador" name="nueva_respuesta" rows="5" maxlength="20000" required placeholder="Informe aquí la respuesta o actualización">{{ old('nueva_respuesta') }}</textarea>
+                @error('nueva_respuesta')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
             </div>
-            <p class="text-muted small mt-1 mb-0">Archivos seleccionados: 0/10</p>
-        </div>
-        <div class="mb-4">
-            <label for="nuevo_estado_solicitud" class="form-label fw-semibold">Nuevo estado</label>
-            <select id="nuevo_estado_solicitud" class="form-select" disabled>
-                @foreach ($estadoOpciones as $val => $label)
-                    <option value="{{ $val }}" @selected($st === $val)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="d-grid gap-2 mx-auto solicitud-gestion__btn-enviar">
-            <button type="button" class="btn btn-primary btn-lg text-uppercase fw-semibold py-2" disabled>Enviar respuesta</button>
-        </div>
+            <div class="mb-3">
+                <span class="form-label fw-semibold d-block">Documentos adjuntos (Máx. 10 PDFs)</span>
+                <div class="input-group">
+                    <input type="file" class="form-control @error('documentos') is-invalid @enderror @error('documentos.*') is-invalid @enderror" id="consultor_adjuntos_pdf" name="documentos[]" accept=".pdf,application/pdf" multiple aria-label="Documentos adjuntos PDF">
+                </div>
+                @error('documentos')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                @error('documentos.*')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                <p class="text-muted small mt-1 mb-0" id="consultorAdjuntosCuenta">Archivos seleccionados: 0/10</p>
+            </div>
+            <div class="mb-4">
+                <label for="nuevo_estado_solicitud" class="form-label fw-semibold">Nuevo estado</label>
+                <select id="nuevo_estado_solicitud" name="nuevo_estado" class="form-select @error('nuevo_estado') is-invalid @enderror" required>
+                    @foreach ($estadoOpciones as $val => $label)
+                        <option value="{{ $val }}" @selected(old('nuevo_estado', $st) === $val)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                @error('nuevo_estado')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+            </div>
+            <div class="d-grid gap-2 mx-auto solicitud-gestion__btn-enviar">
+                <button type="submit" class="btn btn-primary btn-lg text-uppercase fw-semibold py-2">Enviar respuesta</button>
+            </div>
+        </form>
     </div>
 </div>
+@endcan
 
 @can('assignToProveedor', $solicitud)
     @php
@@ -183,7 +195,23 @@
             if (ocr) { window.bootstrap.Offcanvas.getOrCreateInstance(ocr).show(); }
         }
     }
-    document.addEventListener('DOMContentLoaded', abrirYHash);
+    document.addEventListener('DOMContentLoaded', function () {
+        abrirYHash();
+        var fi = document.getElementById('consultor_adjuntos_pdf');
+        var cnt = document.getElementById('consultorAdjuntosCuenta');
+        if (fi && cnt) {
+            fi.addEventListener('change', function () {
+                var n = fi.files ? fi.files.length : 0;
+                if (n > 10) {
+                    cnt.textContent = 'Máximo 10 archivos. Se usarán sólo los primeros 10 al enviar.';
+                    cnt.classList.add('text-warning');
+                } else {
+                    cnt.textContent = 'Archivos seleccionados: ' + n + '/10';
+                    cnt.classList.remove('text-warning');
+                }
+            });
+        }
+    });
     document.querySelectorAll('[data-oc-scroll-doc]').forEach(function (a) {
         a.addEventListener('click', function (e) {
             e.preventDefault();

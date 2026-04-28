@@ -10,6 +10,7 @@ use App\Http\Requests\UpdateClienteSolicitudRequest;
 use App\Models\CatServicio;
 use App\Models\PaqueteServicio;
 use App\Models\Solicitud;
+use App\Domain\Enums\HistorialRespuestaCanal;
 use App\Models\Usuario;
 use App\Repositories\Contracts\SolicitudRepository;
 use App\Services\Solicitud\ClienteSolicitudActualizacionService;
@@ -70,7 +71,7 @@ class SolicitudController extends Controller
         $this->authorize('view', $solicitud);
 
         return view('panel.cliente.solicitudes.show', [
-            'solicitud' => $this->solicitudes->findForDetalle($solicitud->id),
+            'solicitud' => $this->solicitudes->findForDetalle($solicitud->id, HistorialRespuestaCanal::ClienteSj),
         ]);
     }
 
@@ -86,9 +87,17 @@ class SolicitudController extends Controller
         ]);
     }
 
-    public function edit(Solicitud $solicitud): View
+    public function edit(Solicitud $solicitud): View|RedirectResponse
     {
-        $this->authorize('update', $solicitud);
+        $this->authorize('openClienteEdit', $solicitud);
+
+        /** @var Usuario $usuario */
+        $usuario = auth()->user();
+        if (! $usuario->can('update', $solicitud)) {
+            return redirect()
+                ->route('panel.cliente.solicitudes.show', $solicitud)
+                ->with('error', 'Solo puede editar solicitudes en estado Registrado (antes del trámite SJ).');
+        }
 
         $solicitud->load(['serviciosPivote']);
 

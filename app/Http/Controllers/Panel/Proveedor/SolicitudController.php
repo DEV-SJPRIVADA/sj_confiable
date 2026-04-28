@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Panel\Proveedor;
 
 use App\Http\Controllers\Controller;
+use App\Domain\Enums\HistorialRespuestaCanal;
 use App\Models\Solicitud;
 use App\Models\Usuario;
 use App\Repositories\Contracts\SolicitudRepository;
@@ -37,7 +38,7 @@ class SolicitudController extends Controller
         $this->authorize('view', $solicitud);
 
         return view('panel.proveedor.solicitudes.show', [
-            'solicitud' => $this->solicitudes->findForDetalle($solicitud->id),
+            'solicitud' => $this->solicitudes->findForDetalle($solicitud->id, HistorialRespuestaCanal::SjProveedor),
         ]);
     }
 }

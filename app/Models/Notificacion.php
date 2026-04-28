@@ -45,6 +45,8 @@ class Notificacion extends Model
 
     public function scopeNoLeidas(Builder $query): Builder
     {
-        return $query->where('leido', 0);
+        return $query->where(static function (Builder $q): void {
+            $q->where('leido', 0)->orWhereNull('leido');
+        });
     }
 }

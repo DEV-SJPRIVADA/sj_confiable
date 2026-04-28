@@ -13,6 +13,7 @@
             </div>
             <form method="post" action="{{ route('panel.consultor.notificaciones.marcar-leidas') }}" class="d-flex flex-column notificaciones-modal-form" id="formNotifConsultor">
                 @csrf
+                @if ($notificaciones->isNotEmpty())
                 <div class="notificaciones-modal-toolbar d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 bg-white">
                     <div class="form-check mb-0">
                         <input class="form-check-input notif-todos-check rounded-circle" type="checkbox" id="notifSelectAll" title="Seleccionar todos" aria-label="Seleccionar todos">
@@ -23,6 +24,7 @@
                         Marcar como leídas
                     </button>
                 </div>
+                @endif
                 <div class="notificaciones-modal-lista flex-grow-1 overflow-auto px-2 py-2">
                     @forelse ($notificaciones as $n)
                         <div class="notif-item @if(! $n->leido) notif-item--nueva @endif">
@@ -41,7 +43,7 @@
                             </div>
                         </div>
                     @empty
-                        <p class="text-center text-muted notif-vacio py-4 mb-0">No hay notificaciones</p>
+                        <p class="text-center text-muted notif-vacio py-4 mb-0">No hay notificaciones sin leer.</p>
                     @endforelse
                 </div>
             </form>

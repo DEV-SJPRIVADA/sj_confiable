@@ -41,5 +41,9 @@
         </div>
     </div>
 @endif
-@include('panel.solicitudes._fragment-documentos-solicitud', ['solicitud' => $solicitud, 'idPrefix' => $idPrefix])
+@include('panel.solicitudes._fragment-documentos-solicitud', [
+    'solicitud' => $solicitud,
+    'idPrefix' => $idPrefix,
+    'clienteDocumentDownloads' => ($clienteDocumentDownloads ?? false) === true,
+])
 @include('panel.solicitudes._fragment-historial-respuestas', ['solicitud' => $solicitud, 'idPrefix' => $idPrefix])

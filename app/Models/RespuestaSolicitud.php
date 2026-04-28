@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\Enums\HistorialRespuestaCanal;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -19,6 +20,7 @@ class RespuestaSolicitud extends Model
     {
         return [
             'fecha_respuesta' => 'datetime',
+            'canal' => HistorialRespuestaCanal::class,
         ];
     }
 

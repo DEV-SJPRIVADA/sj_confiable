@@ -42,12 +42,19 @@ class UpdatePerfilPropioRequest extends FormRequest
 
     protected function failedValidation(Validator $validator): void
     {
-        throw new HttpResponseException(
-            redirect()
-                ->route('panel.consultor.perfil.show')
-                ->withInput()
-                ->with('open_perfil_modal', true)
-                ->withErrors($validator)
-        );
+        $destino = match ($this->route()?->getName()) {
+            'panel.cliente.perfil.update' => 'panel.cliente.perfil.show',
+            'panel.proveedor.perfil.update' => 'panel.proveedor.perfil.show',
+            default => 'panel.consultor.perfil.show',
+        };
+        $resp = redirect()
+            ->route($destino)
+            ->withInput()
+            ->withErrors($validator);
+        if ($destino === 'panel.consultor.perfil.show') {
+            $resp = $resp->with('open_perfil_modal', true);
+        }
+
+        throw new HttpResponseException($resp);
     }
 }

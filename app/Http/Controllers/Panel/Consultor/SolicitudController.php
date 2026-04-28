@@ -6,10 +6,12 @@ namespace App\Http\Controllers\Panel\Consultor;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AsignarSolicitudRequest;
+use App\Http\Requests\ResponderSolicitudConsultorRequest;
 use App\Models\Proveedor;
 use App\Models\Solicitud;
 use App\Models\Usuario;
 use App\Repositories\Contracts\SolicitudRepository;
+use App\Services\Solicitud\ConsultorSolicitudRespuestaService;
 use App\Services\Solicitud\SolicitudAsignacionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,6 +22,7 @@ class SolicitudController extends Controller
     public function __construct(
         private readonly SolicitudRepository $solicitudes,
         private readonly SolicitudAsignacionService $asignacion,
+        private readonly ConsultorSolicitudRespuestaService $respuestaConsultor,
     ) {}
 
     public function index(Request $request): View
@@ -78,6 +81,25 @@ class SolicitudController extends Controller
             'solicitud' => $solicitud,
             'proveedores' => $proveedores,
         ]);
+    }
+
+    public function respuesta(
+        ResponderSolicitudConsultorRequest $request,
+        Solicitud $solicitud,
+    ): RedirectResponse {
+        /** @var Usuario $actor */
+        $actor = $request->user();
+        $this->respuestaConsultor->registrarRespuestaSj(
+            $solicitud,
+            $actor,
+            $request->nuevaRespuestaTexto(),
+            $request->nuevoEstado(),
+            $request->archivosPdf(),
+        );
+
+        return redirect()
+            ->route('panel.consultor.solicitudes.show', $solicitud)
+            ->with('status', 'Respuesta registrada y notificación enviada a la organización cliente.');
     }
 
     public function asignar(AsignarSolicitudRequest $request, Solicitud $solicitud): RedirectResponse
