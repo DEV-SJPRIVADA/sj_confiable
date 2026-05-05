@@ -72,6 +72,47 @@
     .prov-solic-round-btn--muted {
         background: linear-gradient(180deg, #138aa3 0%, #0b5f74 100%);
     }
+    button.prov-solic-round-btn {
+        appearance: none;
+        -webkit-appearance: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        line-height: 1;
+    }
+    /* Modal detalle (mismo criterio que consultor / legado proveedor_solicitudes) */
+    .solicitud-modal-detalle__content { border-radius: 0.45rem; overflow: hidden; }
+    .solicitud-modal-detalle__bar {
+        background: linear-gradient(180deg, #0c4a8a 0%, #083060 100%) !important;
+    }
+    .solicitud-modal-detalle__archivos {
+        background: #e9ecef;
+        color: #212529;
+        border: 1px solid #dee2e6;
+    }
+    .solicitud-modal-detalle__asoc {
+        background: #fff;
+        border-color: #dee2e6 !important;
+    }
+    .solicitud-modal-detalle__asoc-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.1rem;
+        height: 2.1rem;
+        border-radius: 50%;
+        background: #ffc107;
+        flex-shrink: 0;
+        font-size: 1rem;
+    }
+    .solicitud-modal-detalle__btn-cerrar {
+        border-width: 2px;
+        font-weight: 600;
+    }
+    .solicitud-modal-detalle__btn-cerrar:hover {
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+    }
 </style>
 @endpush
 
@@ -108,7 +149,12 @@
         'solicitudes' => $solicitudes,
         'detalleRoute' => $detalleRoute,
         'listaEstilo' => 'proveedor-legacy',
+        'proveedorGestionRespuestaRoute' => 'panel.proveedor.solicitudes.respuesta',
     ])
+
+    @foreach ($solicitudes as $s)
+        @include('panel.consultor.solicitudes._modal-detalle-solicitud', ['s' => $s])
+    @endforeach
 
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-stretch align-items-lg-center gap-2 mt-3 px-1">
         <p class="small text-muted mb-0 order-lg-0" id="panelProveedorSolResumen" aria-live="polite"></p>
@@ -126,6 +172,9 @@
 @endsection
 
 @push('scripts')
+@php
+    $__provAbrirModalSid = session()->pull('open_modal_solicitud_id');
+@endphp
 <script>
 (function () {
     var tbody = document.getElementById('tbodyPanelSolicitudes');
@@ -199,4 +248,17 @@
     apply();
 })();
 </script>
+@if ($__provAbrirModalSid)
+<script>
+(function () {
+    document.addEventListener('DOMContentLoaded', function () {
+        var id = {{ (int) $__provAbrirModalSid }};
+        var el = document.getElementById('modalDetalleSolicitud' + id);
+        if (el && window.bootstrap && window.bootstrap.Modal) {
+            window.bootstrap.Modal.getOrCreateInstance(el).show();
+        }
+    });
+})();
+</script>
+@endif
 @endpush

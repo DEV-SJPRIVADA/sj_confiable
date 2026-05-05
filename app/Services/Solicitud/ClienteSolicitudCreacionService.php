@@ -67,8 +67,9 @@ final class ClienteSolicitudCreacionService
             $solicitud->celular = (string) $data['celular'];
             $solicitud->ciudad_residencia_evaluado = (string) $data['ciudad_residencia_evaluado'];
             $solicitud->direccion_residencia = (string) $data['direccion_residencia'];
-            $solicitud->comentarios = isset($data['comentarios']) && trim((string) $data['comentarios']) !== ''
-                ? (string) $data['comentarios'] : null;
+            $solicitud->comentarios = array_key_exists('comentarios', $data)
+                ? (trim((string) $data['comentarios']) !== '' ? trim((string) $data['comentarios']) : null)
+                : null;
             $solicitud->usuario_id = (int) $actor->id_usuario;
             $solicitud->estado = 'Registrado';
             $solicitud->activo = true;
@@ -88,11 +89,17 @@ final class ClienteSolicitudCreacionService
 
             $solicitud->save();
 
+            $textoHistorial = 'Solicitud registrada desde el panel cliente.';
+            $comCliente = trim((string) ($solicitud->comentarios ?? ''));
+            if ($comCliente !== '') {
+                $textoHistorial .= "\n\nComentario:\n".$comCliente;
+            }
+
             $ahora = now();
             RespuestaSolicitud::query()->create([
                 'solicitud_id' => (int) $solicitud->id,
                 'usuario_id' => (int) $actor->id_usuario,
-                'respuesta' => 'Solicitud registrada desde el panel cliente.',
+                'respuesta' => $textoHistorial,
                 'estado_anterior' => null,
                 'estado_actual' => 'Registrado',
                 'fecha_respuesta' => $ahora,

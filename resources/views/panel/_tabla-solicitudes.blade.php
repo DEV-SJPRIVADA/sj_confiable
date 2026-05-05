@@ -117,6 +117,9 @@
                 @elseif ($esListaProveedorLegacy)
                     @php
                         $detailUrl = isset($detalleRoute) ? route($detalleRoute, $s) : '#';
+                        $urlGestionRespuesta = isset($proveedorGestionRespuestaRoute)
+                            ? route($proveedorGestionRespuestaRoute, $s)
+                            : $detailUrl.'#panel-solicitud-historial';
                         $envPor = trim((string) ($s->creador?->persona?->correo ?? ''));
                         if ($envPor === '') {
                             $envPor = trim((string) ($s->creador?->usuario ?? ''));
@@ -127,7 +130,7 @@
                     @endphp
                     <td class="text-nowrap fw-medium">
                         @isset($detalleRoute)
-                            <a href="{{ $detailUrl }}" class="text-decoration-none" style="color: #0d6efd;">{{ $s->id }}</a>
+                            <button type="button" class="btn btn-link p-0 m-0 align-baseline text-decoration-none fw-medium" style="color: #0d6efd;" data-bs-toggle="modal" data-bs-target="#modalDetalleSolicitud{{ $s->id }}">{{ $s->id }}</button>
                         @else
                             {{ $s->id }}
                         @endisset
@@ -142,8 +145,8 @@
                     <td class="text-center text-nowrap">
                         @isset($detalleRoute)
                             <div class="d-inline-flex align-items-center justify-content-center gap-1 flex-wrap">
-                                <a href="{{ $detailUrl }}" class="prov-solic-round-btn" title="Ver solicitud"><span class="visually-hidden">Ver solicitud</span><i class="fas fa-eye" aria-hidden="true"></i></a>
-                                <a href="{{ $detailUrl }}#panel-solicitud-historial" class="prov-solic-round-btn prov-solic-round-btn--muted" title="Historial"><span class="visually-hidden">Historial</span><i class="fas fa-reply fa-flip-horizontal" aria-hidden="true"></i></a>
+                                <button type="button" class="prov-solic-round-btn" data-bs-toggle="modal" data-bs-target="#modalDetalleSolicitud{{ $s->id }}" title="Ver detalle de la solicitud"><span class="visually-hidden">Ver detalle de la solicitud</span><i class="fas fa-eye" aria-hidden="true"></i></button>
+                                <a href="{{ $urlGestionRespuesta }}" class="prov-solic-round-btn prov-solic-round-btn--muted" title="Gestionar respuesta"><span class="visually-hidden">Gestionar respuesta</span><i class="fas fa-reply fa-flip-horizontal" aria-hidden="true"></i></a>
                             </div>
                         @else
                             <span class="text-muted">—</span>

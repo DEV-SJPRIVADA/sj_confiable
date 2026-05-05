@@ -12,7 +12,8 @@ use Illuminate\Support\Collection;
 
 /**
  * Reglas de disparo: consultores (tabla notificaciones por rol 2 y 3 como en legado),
- * usuarios cliente (notificaciones_cliente por destinatario), proveedor (notificaciones_proveedor) en asignación existente.
+ * usuarios cliente (notificaciones_cliente cuando SJ envía aviso explícito al cliente),
+ * proveedor (notificaciones_proveedor) en asignación y otros hitos operativos.
  */
 final class SolicitudNotificacionService
 {

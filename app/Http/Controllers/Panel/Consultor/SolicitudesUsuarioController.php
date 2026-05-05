@@ -7,7 +7,9 @@ namespace App\Http\Controllers\Panel\Consultor;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Catalog\ResponderSolicitudUsuarioRequest;
 use App\Models\SolicitudUsuario;
+use App\Models\Usuario;
 use App\Services\Catalog\SolicitudUsuarioRespuestaService;
+use App\Services\Panel\NotificacionConsultorService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,11 +19,22 @@ class SolicitudesUsuarioController extends Controller
 {
     public function __construct(
         private readonly SolicitudUsuarioRespuestaService $respuestas,
+        private readonly NotificacionConsultorService $notificacionesConsultor,
     ) {}
 
     public function index(Request $request): View
     {
         $this->authorize('viewAny', SolicitudUsuario::class);
+
+        /** @var Usuario|null $actor */
+        $actor = $request->user();
+        if ($actor instanceof Usuario) {
+            $this->notificacionesConsultor->marcarLeidaAlSeguirEnlace(
+                $actor,
+                (int) $request->query('cn', 0),
+                null,
+            );
+        }
 
         $perPage = (int) $request->input('per_page', 10);
         if (! in_array($perPage, [10, 25, 50, 100], true)) {

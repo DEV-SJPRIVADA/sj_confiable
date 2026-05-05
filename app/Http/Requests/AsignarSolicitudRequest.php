@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Models\Solicitud;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -11,7 +12,13 @@ class AsignarSolicitudRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        /** @var Solicitud|null $solicitud */
+        $solicitud = $this->route('solicitud');
+        $user = $this->user();
+
+        return $solicitud instanceof Solicitud
+            && $user !== null
+            && $user->can('assignToProveedor', $solicitud);
     }
 
     /**

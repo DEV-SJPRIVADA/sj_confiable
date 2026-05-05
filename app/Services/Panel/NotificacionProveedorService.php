@@ -22,6 +22,7 @@ final class NotificacionProveedorService
 
         return NotificacionProveedor::query()
             ->where('id_proveedor_destino', (int) $usuario->id_proveedor)
+            ->noLeidas()
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->limit(250)
@@ -36,7 +37,7 @@ final class NotificacionProveedorService
 
         return NotificacionProveedor::query()
             ->where('id_proveedor_destino', (int) $usuario->id_proveedor)
-            ->where('leido', false)
+            ->noLeidas()
             ->count();
     }
 
@@ -55,7 +56,7 @@ final class NotificacionProveedorService
             $base = NotificacionProveedor::query()->where('id_proveedor_destino', $idProv);
 
             if ($todas) {
-                return $base->where('leido', false)->update(['leido' => true]);
+                return $base->update(['leido' => 1]);
             }
             if ($ids === []) {
                 return 0;
@@ -65,8 +66,7 @@ final class NotificacionProveedorService
 
             return $base
                 ->whereIn('id', $idsLimpio)
-                ->where('leido', false)
-                ->update(['leido' => true]);
+                ->update(['leido' => 1]);
         });
     }
 

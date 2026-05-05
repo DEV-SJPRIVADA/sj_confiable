@@ -13,6 +13,7 @@ use App\Models\Solicitud;
 use App\Domain\Enums\HistorialRespuestaCanal;
 use App\Models\Usuario;
 use App\Repositories\Contracts\SolicitudRepository;
+use App\Services\Panel\NotificacionClienteService;
 use App\Services\Solicitud\ClienteSolicitudActualizacionService;
 use App\Services\Solicitud\ClienteSolicitudCancelacionService;
 use App\Services\Solicitud\ClienteSolicitudCreacionService;
@@ -27,6 +28,7 @@ class SolicitudController extends Controller
     public function __construct(
         private readonly SolicitudListService $listado,
         private readonly SolicitudRepository $solicitudes,
+        private readonly NotificacionClienteService $notificacionesCliente,
     ) {}
 
     public function create(Request $request): View
@@ -46,7 +48,10 @@ class SolicitudController extends Controller
 
         /** @var Usuario $usuario */
         $usuario = $request->user();
-        $solicitud = $crear->crear($usuario, $request->validated());
+        $payload = array_merge($request->validated(), [
+            'comentarios' => $request->input('comentarios'),
+        ]);
+        $solicitud = $crear->crear($usuario, $payload);
 
         return redirect()
             ->route('panel.cliente.solicitudes.estado', $solicitud)
@@ -66,9 +71,17 @@ class SolicitudController extends Controller
         ]);
     }
 
-    public function show(Solicitud $solicitud): View
+    public function show(Request $request, Solicitud $solicitud): View
     {
         $this->authorize('view', $solicitud);
+
+        /** @var Usuario $actor */
+        $actor = $request->user();
+        $this->notificacionesCliente->marcarLeidaAlSeguirEnlace(
+            $actor,
+            (int) $request->query('nc', 0),
+            (int) $solicitud->id,
+        );
 
         return view('panel.cliente.solicitudes.show', [
             'solicitud' => $this->solicitudes->findForDetalle($solicitud->id, HistorialRespuestaCanal::ClienteSj),
@@ -78,9 +91,17 @@ class SolicitudController extends Controller
     /**
      * Vista «Estado de solicitud» (legado ResultadoSolicitud): abre desde el primer icono del listado.
      */
-    public function estado(Solicitud $solicitud): View
+    public function estado(Request $request, Solicitud $solicitud): View
     {
         $this->authorize('view', $solicitud);
+
+        /** @var Usuario $actor */
+        $actor = $request->user();
+        $this->notificacionesCliente->marcarLeidaAlSeguirEnlace(
+            $actor,
+            (int) $request->query('nc', 0),
+            (int) $solicitud->id,
+        );
 
         return view('panel.cliente.solicitudes.estado', [
             'solicitud' => $this->solicitudes->findForEstadoCliente($solicitud->id),

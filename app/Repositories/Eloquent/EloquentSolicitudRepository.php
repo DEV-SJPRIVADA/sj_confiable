@@ -15,7 +15,7 @@ final class EloquentSolicitudRepository implements SolicitudRepository
 {
     public function listActiveForConsultor(int $activo = 1): Collection
     {
-        return $this->baseListQuery($activo)
+        return $this->withAdjuntosRespuestaOperativa($this->baseListQuery($activo))
             ->orderByDesc('solicitudes.fecha_creacion')
             ->get();
     }
@@ -27,7 +27,7 @@ final class EloquentSolicitudRepository implements SolicitudRepository
         string $sort,
         string $dir
     ): LengthAwarePaginator {
-        $query = $this->baseListQuery($activo);
+        $query = $this->withAdjuntosRespuestaOperativa($this->baseListQuery($activo));
         if ($q !== '') {
             $like = '%'.$q.'%';
             $query->where(function (Builder $w) use ($like, $q): void {
@@ -109,7 +109,7 @@ final class EloquentSolicitudRepository implements SolicitudRepository
 
     public function listActiveForProveedor(int $idProveedor, int $activo = 1): Collection
     {
-        return $this->baseListQuery($activo)
+        return $this->withAdjuntosRespuestaOperativa($this->baseListQuery($activo))
             ->where('solicitudes.id_proveedor', $idProveedor)
             ->orderByDesc('solicitudes.fecha_creacion')
             ->get();
@@ -132,6 +132,8 @@ final class EloquentSolicitudRepository implements SolicitudRepository
 
     public function findForDetalle(int $id, ?HistorialRespuestaCanal $historialParaCanal = null): Solicitud
     {
+        $eagerAdjuntosCliente = $this->eagerAdjuntosVisiblesCliente($historialParaCanal);
+
         return Solicitud::query()
             ->with([
                 'creador.cliente',
@@ -140,20 +142,22 @@ final class EloquentSolicitudRepository implements SolicitudRepository
                 'servicio',
                 'serviciosPivote',
                 'paquete',
-                'documentos',
+                'documentos' => $eagerAdjuntosCliente,
                 'evaluados',
                 'historialRespuestas' => $this->scopeHistorialEagerLoads($historialParaCanal),
-                'ultimaRespuestaMadre',
+                'ultimaRespuestaMadre.documentos' => $eagerAdjuntosCliente,
                 'respuestasMadre' => static function ($query): void {
                     $query->orderByDesc('fecha_creacion');
                 },
-                'respuestasMadre.documentos',
+                'respuestasMadre.documentos' => $eagerAdjuntosCliente,
             ])
             ->findOrFail($id);
     }
 
     public function findForEstadoCliente(int $id): Solicitud
     {
+        $soloCliente = static fn ($q) => $q->where('visible_para_cliente', true);
+
         return Solicitud::query()
             ->with([
                 'creador.cliente',
@@ -162,12 +166,24 @@ final class EloquentSolicitudRepository implements SolicitudRepository
                 'servicio',
                 'serviciosPivote',
                 'paquete',
-                'documentos',
+                'documentos' => $soloCliente,
                 'historialRespuestas' => $this->scopeHistorialEagerLoads(HistorialRespuestaCanal::ClienteSj),
                 'respuestasMadre.usuario.persona',
-                'respuestasMadre.documentos',
+                'respuestasMadre.documentos' => $soloCliente,
             ])
             ->findOrFail($id);
+    }
+
+    /**
+     * @return Closure(object):void
+     */
+    private function eagerAdjuntosVisiblesCliente(?HistorialRespuestaCanal $historialParaCanal): \Closure
+    {
+        if ($historialParaCanal === HistorialRespuestaCanal::ClienteSj) {
+            return static fn ($q) => $q->where('visible_para_cliente', true);
+        }
+
+        return static function (): void {};
     }
 
     /**
@@ -181,6 +197,19 @@ final class EloquentSolicitudRepository implements SolicitudRepository
             }
             $query->orderByDesc('fecha_respuesta')->with(['usuario.proveedor']);
         };
+    }
+
+    /**
+     * PDFs del trámite con el asociado ({@see RespuestaMadre} / {@see DocumentoRespuesta}) para modales y listados SJ–proveedor.
+     */
+    private function withAdjuntosRespuestaOperativa(Builder $query): Builder
+    {
+        return $query->with([
+            'respuestasMadre' => static function ($query): void {
+                $query->orderByDesc('fecha_creacion');
+            },
+            'respuestasMadre.documentos',
+        ]);
     }
 
     /**

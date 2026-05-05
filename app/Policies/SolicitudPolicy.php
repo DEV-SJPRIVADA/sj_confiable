@@ -71,7 +71,36 @@ class SolicitudPolicy
 
     public function assignToProveedor(Usuario $actor, Solicitud $solicitud): bool
     {
-        return $this->manageAsConsultor($actor, $solicitud);
+        return $this->manageAsConsultor($actor, $solicitud)
+            && ! $this->solicitudCerradaParaGestion($solicitud);
+    }
+
+    /**
+     * Registrar mensaje / estado / adjuntos nuevos hacia la organización cliente (sólo con solicitud abierta).
+     */
+    public function registrarNuevaRespuestaConsultor(Usuario $actor, Solicitud $solicitud): bool
+    {
+        return $this->manageAsConsultor($actor, $solicitud)
+            && ! $this->solicitudCerradaParaGestion($solicitud);
+    }
+
+    /**
+     * Quitar PDFs de la tabla {@see Documento} (expediente de la solicitud). No aplica a {@see DocumentoRespuesta} del asociado.
+     */
+    public function deleteAdjuntoExpedienteAsConsultor(Usuario $actor, Solicitud $solicitud): bool
+    {
+        return $this->manageAsConsultor($actor, $solicitud)
+            && ! $this->solicitudCerradaParaGestion($solicitud);
+    }
+
+    /**
+     * El consultor SJ no elimina documentos operativos ya registrados por el asociado.
+     */
+    public function deleteDocumentoRespuestaOperativaAsConsultor(Usuario $actor, Solicitud $solicitud): bool
+    {
+        unset($actor, $solicitud);
+
+        return false;
     }
 
     /**
@@ -131,6 +160,37 @@ class SolicitudPolicy
         return $rol === UserRole::Proveedor
             && (int) $solicitud->id_proveedor === (int) $actor->id_proveedor
             && $actor->id_proveedor !== null;
+    }
+
+    /**
+     * Respuesta operativa del asociado: {@see RespuestaMadre}, {@see DocumentoRespuesta} e historial {@see HistorialRespuestaCanal::SjProveedor}.
+     */
+    public function respondAsProveedor(Usuario $actor, Solicitud $solicitud): bool
+    {
+        if (! $this->actAsProveedor($actor, $solicitud)) {
+            return false;
+        }
+
+        $est = mb_strtolower(trim((string) ($solicitud->estado ?? '')));
+        if ($est === '' || str_contains($est, 'cancel')) {
+            return false;
+        }
+        if (str_contains($est, 'complet')) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Completado / Cancelado: sin nuevas respuestas, asignaciones ni borrado de expediente por consultor.
+     */
+    private function solicitudCerradaParaGestion(Solicitud $solicitud): bool
+    {
+        $est = mb_strtolower(trim((string) ($solicitud->estado ?? '')));
+
+        return $est !== ''
+            && (str_contains($est, 'complet') || str_contains($est, 'cancel'));
     }
 
     private function solicitudPerteneceAOrganizacionCliente(Solicitud $solicitud, Usuario $actor): bool

@@ -15,6 +15,14 @@ class Documento extends Model
 
     protected $guarded = ['id'];
 
+    protected function casts(): array
+    {
+        return [
+            'visible_para_cliente' => 'boolean',
+            'cargado_desde_panel_cliente' => 'boolean',
+        ];
+    }
+
     public function solicitud(): BelongsTo
     {
         return $this->belongsTo(Solicitud::class, 'solicitud_id', 'id');

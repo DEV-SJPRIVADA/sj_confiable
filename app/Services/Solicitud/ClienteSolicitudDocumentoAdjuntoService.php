@@ -12,9 +12,13 @@ use Illuminate\Support\Str;
 
 final class ClienteSolicitudDocumentoAdjuntoService
 {
-    public function adjuntar(Solicitud $solicitud, UploadedFile $file): Documento
-    {
-        return DB::transaction(function () use ($solicitud, $file): Documento {
+    public function adjuntar(
+        Solicitud $solicitud,
+        UploadedFile $file,
+        bool $visibleParaCliente = true,
+        bool $cargadoDesdePanelCliente = false,
+    ): Documento {
+        return DB::transaction(function () use ($solicitud, $file, $visibleParaCliente, $cargadoDesdePanelCliente): Documento {
             $original = $file->getClientOriginalName();
             $stored = $file->storeAs(
                 'uploads',
@@ -26,6 +30,8 @@ final class ClienteSolicitudDocumentoAdjuntoService
             $doc->solicitud_id = $solicitud->id;
             $doc->nombre_documento = $original !== '' ? $original : basename($stored);
             $doc->ruta_documento = $stored;
+            $doc->visible_para_cliente = $visibleParaCliente;
+            $doc->cargado_desde_panel_cliente = $cargadoDesdePanelCliente;
             $doc->save();
 
             return $doc;

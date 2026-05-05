@@ -26,6 +26,7 @@ class MarcarNotificacionesProveedorRequest extends FormRequest
             'ids' => ['sometimes', 'array'],
             'ids.*' => ['integer', 'min:1'],
             'todas' => ['sometimes', 'boolean'],
+            'redirect_abrir_modal_solicitud' => ['nullable', 'integer', 'min:1'],
         ];
     }
 
@@ -33,6 +34,9 @@ class MarcarNotificacionesProveedorRequest extends FormRequest
     {
         $validator->after(function (Validator $v): void {
             if ($this->boolean('todas')) {
+                return;
+            }
+            if ($this->filled('redirect_abrir_modal_solicitud') && is_array($this->input('ids')) && count($this->input('ids')) === 1) {
                 return;
             }
             $ids = $this->input('ids', []);

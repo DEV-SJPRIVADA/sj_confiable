@@ -13,6 +13,7 @@ use App\Models\Usuario;
 use App\Repositories\Contracts\SolicitudRepository;
 use App\Services\Solicitud\ConsultorSolicitudRespuestaService;
 use App\Services\Solicitud\SolicitudAsignacionService;
+use App\Services\Panel\NotificacionConsultorService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -23,6 +24,7 @@ class SolicitudController extends Controller
         private readonly SolicitudRepository $solicitudes,
         private readonly SolicitudAsignacionService $asignacion,
         private readonly ConsultorSolicitudRespuestaService $respuestaConsultor,
+        private readonly NotificacionConsultorService $notificacionesConsultor,
     ) {}
 
     public function index(Request $request): View
@@ -68,9 +70,18 @@ class SolicitudController extends Controller
         ]);
     }
 
-    public function show(Solicitud $solicitud): View
+    public function show(Request $request, Solicitud $solicitud): View
     {
         $this->authorize('view', $solicitud);
+
+        /** @var Usuario $actor */
+        $actor = $request->user();
+        $this->notificacionesConsultor->marcarLeidaAlSeguirEnlace(
+            $actor,
+            (int) $request->query('cn', 0),
+            (int) $solicitud->id,
+        );
+
         $solicitud = $this->solicitudes->findForDetalle($solicitud->id);
 
         $proveedores = Proveedor::query()
@@ -89,17 +100,25 @@ class SolicitudController extends Controller
     ): RedirectResponse {
         /** @var Usuario $actor */
         $actor = $request->user();
+        $visibleCliente = $request->visibleParaOrganizacionCliente();
         $this->respuestaConsultor->registrarRespuestaSj(
             $solicitud,
             $actor,
             $request->nuevaRespuestaTexto(),
             $request->nuevoEstado(),
             $request->archivosPdf(),
+            $request->refsAdjuntosNotificacion(),
+            $visibleCliente,
         );
 
         return redirect()
             ->route('panel.consultor.solicitudes.show', $solicitud)
-            ->with('status', 'Respuesta registrada y notificación enviada a la organización cliente.');
+            ->with(
+                'status',
+                $visibleCliente
+                    ? 'Respuesta registrada y notificación enviada a la organización cliente.'
+                    : 'Respuesta registrada en auditoría SJ (sin aviso ni historial visible para el cliente).',
+            );
     }
 
     public function asignar(AsignarSolicitudRequest $request, Solicitud $solicitud): RedirectResponse
@@ -118,6 +137,6 @@ class SolicitudController extends Controller
 
         return redirect()
             ->route('panel.consultor.solicitudes.show', $solicitud)
-            ->with('status', 'Solicitud asignada al asociado y notificaciones registradas.');
+            ->with('status', 'Solicitud asignada al asociado; se registró la notificación en su panel.');
     }
 }

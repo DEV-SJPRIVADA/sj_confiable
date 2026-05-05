@@ -26,6 +26,7 @@ class SolicitudArchivoController extends Controller
         $doc = Documento::query()
             ->where('solicitud_id', $solicitud->id)
             ->whereKey($documento)
+            ->where('visible_para_cliente', true)
             ->firstOrFail();
 
         $absolute = $resolver->resolve($doc->ruta_documento);
@@ -47,6 +48,7 @@ class SolicitudArchivoController extends Controller
 
         $dr = DocumentoRespuesta::query()
             ->whereKey($documentoRespuesta)
+            ->where('visible_para_cliente', true)
             ->whereHas('respuestaMadre', fn ($q) => $q->where('solicitud_id', $solicitud->id))
             ->firstOrFail();
 
@@ -67,7 +69,7 @@ class SolicitudArchivoController extends Controller
     ): RedirectResponse {
         $this->authorize('attachDocumentosCliente', $solicitud);
 
-        $adjuntar->adjuntar($solicitud, $request->file('documento'));
+        $adjuntar->adjuntar($solicitud, $request->file('documento'), true, true);
 
         return redirect()
             ->route('panel.cliente.solicitudes.show', $solicitud)

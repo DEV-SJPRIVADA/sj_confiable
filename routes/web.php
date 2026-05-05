@@ -17,6 +17,7 @@ use App\Http\Controllers\Panel\Consultor\InformesController;
 use App\Http\Controllers\Panel\Consultor\NotificacionConsultorController;
 use App\Http\Controllers\Panel\Consultor\PerfilController;
 use App\Http\Controllers\Panel\Consultor\SolicitudController as ConsultorSolicitudController;
+use App\Http\Controllers\Panel\Consultor\SolicitudDocumentoController as ConsultorSolicitudDocumentoController;
 use App\Http\Controllers\Panel\Consultor\SolicitudesUsuarioController;
 use App\Http\Controllers\Panel\Consultor\UsuariosController;
 use App\Http\Controllers\Panel\Proveedor\InicioController as ProveedorInicioController;
@@ -78,6 +79,12 @@ Route::middleware(['auth', 'role:2,3'])->prefix('panel/consultor')->name('panel.
     Route::get('solicitudes', [ConsultorSolicitudController::class, 'index'])->name('solicitudes.index');
     Route::post('solicitudes/{solicitud}/respuesta', [ConsultorSolicitudController::class, 'respuesta'])->name('solicitudes.respuesta');
     Route::post('solicitudes/{solicitud}/asignar', [ConsultorSolicitudController::class, 'asignar'])->name('solicitudes.asignar');
+    Route::delete('solicitudes/{solicitud}/documentos/{documento}', [ConsultorSolicitudDocumentoController::class, 'eliminarDocumentoSolicitud'])
+        ->whereNumber(['solicitud', 'documento'])
+        ->name('solicitudes.documentos.destroy');
+    Route::delete('solicitudes/{solicitud}/documentos-respuesta/{documentoRespuesta}', [ConsultorSolicitudDocumentoController::class, 'eliminarDocumentoRespuesta'])
+        ->whereNumber(['solicitud', 'documentoRespuesta'])
+        ->name('solicitudes.documentos-respuesta.destroy');
     Route::get('solicitudes/{solicitud}', [ConsultorSolicitudController::class, 'show'])->name('solicitudes.show');
 });
 
@@ -118,6 +125,12 @@ Route::middleware(['auth', 'role:6'])->prefix('panel/proveedor')->name('panel.pr
     Route::redirect('notificaciones', '/panel/proveedor/inicio')->name('notificaciones');
     Route::post('notificaciones/marcar-leidas', [ProveedorNotificacionController::class, 'marcarLeidas'])->name('notificaciones.marcar-leidas');
     Route::get('solicitudes', [ProveedorSolicitudController::class, 'index'])->name('solicitudes.index');
+    Route::get('solicitudes/{solicitud}/respuesta', [ProveedorSolicitudController::class, 'respuesta'])
+        ->whereNumber('solicitud')
+        ->name('solicitudes.respuesta');
+    Route::post('solicitudes/{solicitud}/respuesta', [ProveedorSolicitudController::class, 'respuestaGuardar'])
+        ->whereNumber('solicitud')
+        ->name('solicitudes.respuesta.store');
     Route::get('solicitudes/{solicitud}', [ProveedorSolicitudController::class, 'show'])
         ->whereNumber('solicitud')
         ->name('solicitudes.show');

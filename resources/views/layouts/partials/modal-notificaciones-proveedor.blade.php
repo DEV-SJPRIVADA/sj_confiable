@@ -14,40 +14,48 @@
                     <i class="fas fa-times text-white" aria-hidden="true"></i>
                 </button>
             </div>
-            <form method="post" action="{{ route('panel.proveedor.notificaciones.marcar-leidas') }}" class="d-flex flex-column notificaciones-modal-prov-form" id="formNotifProveedor">
-                @csrf
-                <div class="notificaciones-modal-prov-toolbar d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2">
-                    <div class="form-check mb-0">
-                        <input class="form-check-input notif-prov-todos-check rounded-circle" type="checkbox" id="notifProvSelectAll" title="Seleccionar todos" autocomplete="off" aria-label="Seleccionar todos">
-                        <label class="form-check-label notif-prov-toolbar-label text-body fw-medium" for="notifProvSelectAll">Seleccionar todos</label>
-                    </div>
-                    <button type="submit" class="btn btn-prov-marcar-leidas d-inline-flex align-items-center gap-2 text-uppercase">
-                        <i class="fas fa-check-double" aria-hidden="true"></i>
-                        Marcar como leídas
-                    </button>
-                </div>
-                <div class="notificaciones-modal-prov-lista flex-grow-1 overflow-auto px-2 py-3">
-                    @forelse ($notificaciones as $n)
-                        <div class="notif-prov-item @if(! $n->leido) notif-prov-item--nueva @endif">
-                            <div class="notif-prov-td notif-prov-td--check">
-                                <input type="checkbox" class="form-check-input notif-prov-item-check m-0" name="ids[]" value="{{ $n->id }}" autocomplete="off" title="Seleccionar" aria-label="Seleccionar notificación #{{ $n->id }}">
-                            </div>
-                            <div class="notif-prov-td notif-prov-td--ico" aria-hidden="true">
-                                <span class="notif-prov-ico"><i class="fas fa-sync-alt"></i></span>
-                            </div>
-                            <div class="notif-prov-td notif-prov-td--texto min-w-0">
-                                <span class="notif-prov-mensaje text-dark">{{ $n->mensaje }}</span>
-                                <span class="notif-prov-fecha text-secondary"> ({{ $n->fecha?->format('d/m/Y H:i') ?? '—' }})</span>
-                            </div>
-                            <div class="notif-prov-td notif-prov-td--accion">
-                                <a class="btn btn-sm btn-primary text-uppercase notif-prov-btn-detalle" href="{{ $notifSvc->urlDetalle($n) }}">ver detalle</a>
-                            </div>
+            @if ($notificaciones->isNotEmpty())
+                <form method="post" action="{{ route('panel.proveedor.notificaciones.marcar-leidas') }}" class="border-0" id="formNotifProveedorMarcar">
+                    @csrf
+                    <div class="notificaciones-modal-prov-toolbar d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input notif-prov-todos-check rounded-circle" type="checkbox" id="notifProvSelectAll" title="Seleccionar todos" autocomplete="off" aria-label="Seleccionar todos">
+                            <label class="form-check-label notif-prov-toolbar-label text-body fw-medium" for="notifProvSelectAll">Seleccionar todos</label>
                         </div>
-                    @empty
-                        <p class="text-center text-muted notif-prov-vacio py-5 mb-0">No hay notificaciones nuevas.</p>
-                    @endforelse
-                </div>
-            </form>
+                        <button type="submit" class="btn btn-prov-marcar-leidas d-inline-flex align-items-center gap-2 text-uppercase">
+                            <i class="fas fa-check-double" aria-hidden="true"></i>
+                            Marcar como leídas
+                        </button>
+                    </div>
+                </form>
+            @endif
+            <div class="notificaciones-modal-prov-lista flex-grow-1 overflow-auto px-2 py-3">
+                @forelse ($notificaciones as $n)
+                    <div class="notif-prov-item @if(! $n->leido) notif-prov-item--nueva @endif">
+                        <div class="notif-prov-td notif-prov-td--check">
+                                <input type="checkbox" class="form-check-input notif-prov-item-check m-0" form="formNotifProveedorMarcar" name="ids[]" value="{{ $n->id }}" autocomplete="off" title="Seleccionar" aria-label="Seleccionar notificación #{{ $n->id }}">
+                        </div>
+                        <div class="notif-prov-td notif-prov-td--ico" aria-hidden="true">
+                            <span class="notif-prov-ico"><i class="fas fa-sync-alt"></i></span>
+                        </div>
+                        <div class="notif-prov-td notif-prov-td--texto min-w-0">
+                            <span class="notif-prov-mensaje text-dark">{{ $n->mensaje }}</span>
+                            <span class="notif-prov-fecha text-secondary"> ({{ $n->fecha?->format('d/m/Y H:i') ?? '—' }})</span>
+                        </div>
+                        <div class="notif-prov-td notif-prov-td--accion">
+                            {{-- Marca leída y abre el mismo modal de detalle que en el listado de solicitudes (legado proveedor_solicitudes). --}}
+                            <form method="post" action="{{ route('panel.proveedor.notificaciones.marcar-leidas') }}" class="d-inline">
+                                @csrf
+                                <input type="hidden" name="ids[]" value="{{ $n->id }}">
+                                <input type="hidden" name="redirect_abrir_modal_solicitud" value="{{ (int) $n->id_solicitud }}">
+                                <button type="submit" class="btn btn-sm btn-primary text-uppercase notif-prov-btn-detalle">ver detalle</button>
+                            </form>
+                        </div>
+                    </div>
+                @empty
+                    <p class="text-center text-muted notif-prov-vacio py-5 mb-0">No hay notificaciones sin leer.</p>
+                @endforelse
+            </div>
         </div>
     </div>
 </div>

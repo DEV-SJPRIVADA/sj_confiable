@@ -63,7 +63,7 @@ Resumen de paneles:
 
 - **Consultor / admin SJ** (roles 2, 3): prefijo ` /panel/consultor` — inicio (dashboard), mi perfil, usuarios, clientes, asociados, confiabilidad, solicitudes de gestión de usuarios (`t_solicitudes_usuario`), informes, detalle (**respuesta SJ frente al cliente**, asignación a asociado), modal de notificaciones.
 - **Cliente** (1, 4, 5): ` /panel/cliente` — inicio con filtros y gráficos (Chart.js), listado de solicitudes, **vista Estado de solicitud**, alta/edición de solicitud, anulación y perfil; **campana de notificaciones** (`notificaciones_cliente` por usuario); iconos de acciones según política.
-- **Proveedor** (6): ` /panel/proveedor` — inicio orientativo, solicitudes asignadas, perfil y **modal de notificaciones** (`notificaciones_proveedor`).
+- **Proveedor** (6): ` /panel/proveedor` — inicio orientativo, solicitudes asignadas (detalle, respuesta con PDF y cambio de estado vía `ProveedorSolicitudRespuestaService`; notificaciones a consultores SJ), perfil y **modal de notificaciones** (`notificaciones_proveedor`; deep link opcional desde campana).
 
 ### Panel consultor: catálogos y permisos
 
@@ -107,7 +107,9 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 
 - **Listado** `GET /panel/consultor/solicitudes`: pantalla *Gestión de Solicitudes* alineada al legado: conmutador Activas/Inactivas (`solicitudes.activo`), búsqueda, ordenación, paginación, filas resaltadas por estado, acciones con icono PDF (`public/images/pdf.png`) y contador de documentos (sin documentos el control no navega). La **lupa** abre un **modal** (*Detalle de Solicitud*) sin salir del listado; la **lista** enlaza a la vista de gestión con ancla `#historial` (abre el panel de historial).
 - **Datos:** `SolicitudRepository::paginateForConsultor()` y `baseListQuery()` cargan relaciones necesarias (incl. `paquete`, `proveedorAsignado`, `documentos` donde aplica).
-- **Vista por solicitud** `GET /panel/consultor/solicitudes/{solicitud}`: cabecera con **Volver**, **Detalle** e **Historial**; **offcanvas** detalle/documentos (`#documentos`) e historial (`#historial`); cuerpo central con ***Nueva respuesta*** — formulario activo (`POST /panel/consultor/solicitudes/{solicitud}/respuesta`, multipart): texto obligatorio, hasta 10 PDF, nuevo estado (canal historial `cliente_sj`); notificación a usuarios de la organización cliente vía `SolicitudNotificacionService`. Bloque ***Asignación de asociado de negocio*** si `@can assignToProveedor`. Fragmentos compartidos: `_fragment-documentos-*`, `_fragment-historial-respuestas` (audiencia por `canal` en `respuesta_solicitudes`).
+- **Vista por solicitud** `GET /panel/consultor/solicitudes/{solicitud}`: cabecera con **Volver**, **Detalle** e **Historial**; **offcanvas** detalle/documentos (`#documentos`) e historial (`#historial`); cuerpo central con ***Nueva respuesta*** — formulario activo (`POST /panel/consultor/solicitudes/{solicitud}/respuesta`, multipart): texto obligatorio, hasta 10 PDF, nuevo estado; historial con canal `cliente_sj` si el mensaje es **visible al cliente**, o `solo_sj` si el consultor marca solo trámite interno (sin aviso ni línea en el historial del panel cliente). Notificación a la organización cliente vía `SolicitudNotificacionService` solo en envíos visibles al cliente. Bloque ***Asignación de asociado de negocio*** (`POST …/asignar`) notifica al asociado; **no** dispara aviso al cliente. Fragmentos compartidos: `_fragment-documentos-*`, `_fragment-historial-respuestas` (audiencia por `canal` en `respuesta_solicitudes`).
+- **Adjuntos y visibilidad en panel cliente:** en *Nueva respuesta*, los checks *Adjuntos ya en expediente — incluir en el aviso al cliente* envían referencias `doc-{id}` / `dresp-{id}` (`ResponderSolicitudConsultorRequest::refsAdjuntosNotificacion`). Al guardar un envío **visible al cliente**, `ConsultorSolicitudRespuestaService` sincroniza `documentos.visible_para_cliente` y `documentos_respuesta.visible_para_cliente`: solo permanecen visibles para el cliente los marcados, las subidas del cliente (`cargado_desde_panel_cliente`) y los PDF nuevos adjuntados en ese envío. Los PDF que sube el asociado quedan ocultos al cliente hasta que el consultor los incluya así. El listado/descarga cliente usa esos flags (`EloquentSolicitudRepository` con canal cliente, `SolicitudArchivoController`).
+- **Documentos operativos (consultor):** eliminación controlada de PDF de solicitud o de respuesta madre vía `SolicitudDocumentoController` y rutas dedicadas (reglas en política/servicio).
 - **Partials consultor:** `_modal-detalle-solicitud.blade.php` (modal listado), `_offcanvases-gestion-solicitud.blade.php` (paneles laterales en show).
 
 #### Informes de solicitudes (consultor)
@@ -154,7 +156,7 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 | `GET/POST` crear y `PUT` editar solicitud | Formularios alineados al legado; solo edición si `estado === Registrado` y permisos. |
 | `POST …/cancelar` | Anula solicitud (`Cancelado`, `activo = 0`) con confirmación; política `cancel`. |
 | `POST …/notificaciones/marcar-leidas` | Marca leídas notificaciones cliente (modal campana). |
-| Adjuntos a solicitud | `POST …/solicitudes/{id}/archivos/documento` (PDF, política y permisos subida documentos). |
+| Adjuntos a solicitud | `POST …/solicitudes/{id}/archivos/documento` (PDF, política y permisos subida documentos); descargas sujetas a `visible_para_cliente`. |
 
 - **Partial compartido:** `resources/views/panel/partials/_cliente-acciones-solicitud-inner.blade.php` y estilos `_styles-cliente-acciones-solicitud.blade.php` (Inicio + listado Solicitudes).
 - **Código:** `ClienteInicioController`, `ClienteInicioService`, `ClienteSolicitudController`, `ClienteSolicitudCreacionService`, `ClienteSolicitudActualizacionService`, `ClienteSolicitudCancelacionService`, `ClienteSolicitudDocumentoAdjuntoService`, `NotificacionClienteService`, `ImportacionMasivaController`, `PerfilController`, `Cliente\NotificacionController`; requests `StoreClienteSolicitudRequest`, `UpdateClienteSolicitudRequest`, `MarcarNotificacionesClienteRequest`.
@@ -176,16 +178,16 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 
 ### Historial de respuestas y canal (`respuesta_solicitudes.canal`)
 
-- Enum `HistorialRespuestaCanal`: `cliente_sj` (mensaje visible a cliente + consultores SJ) y `sj_proveedor` (operación con asociado, no lista en vista cliente según query del repositorio).
-- Migraciones de backfill opcionales para filas sin canal / creación retroactiva en historial.
+- Enum `HistorialRespuestaCanal`: `cliente_sj` (frente al cliente y consultores SJ), `sj_proveedor` (operación con asociado; el repositorio no expone estas filas en la vista cliente) y `solo_sj` (trámite interno SJ, sin presencia en el historial del panel cliente).
+- Migraciones de backfill opcionales para filas sin canal, comentarios de creación en historial y reclasificación de historial consultor.
 
 ## Estructura relevante (código)
 
-- `app/Http/Controllers/Panel/Consultor/`: controladores del panel consultor (incl. `PerfilController`, `NotificacionConsultorController`, `InformesController`, `SolicitudController` con `respuesta` y `asignar`)
+- `app/Http/Controllers/Panel/Consultor/`: controladores del panel consultor (incl. `PerfilController`, `NotificacionConsultorController`, `InformesController`, `SolicitudController` con `respuesta` y `asignar`, `SolicitudDocumentoController` para borrado de adjuntos)
 - `app/Http/Requests/Catalog/`: validación de catálogos (consultor); en **usuarios**, **clientes** y **asociados**, los *Form requests* de alta/edición usan `failedValidation` para volver al listado y reabrir el modal correspondiente cuando hay errores.
 - `app/Models/`: modelos Eloquent mapeando tablas legado (`solicitudes`, `t_usuarios`, `t_clientes`, `t_proveedores`, `notificaciones`, etc.)
 - `app/Policies/`: `SolicitudPolicy`, `ClientePolicy`, `ProveedorPolicy`, `UsuarioPolicy`, `SolicitudUsuarioPolicy`, y `Policies/Concerns/AuthorizesSJStaff`
-- `app/Services/Solicitud/`: `SolicitudAsignacionService`, `ClienteSolicitudCreacionService`, `ConsultorSolicitudRespuestaService`, `SolicitudNotificacionService`, documentos y rutas de almacenamiento (`SolicitudDocumentoPathResolver` si aplica)
+- `app/Services/Solicitud/`: `SolicitudAsignacionService`, `ClienteSolicitudCreacionService`, `ConsultorSolicitudRespuestaService`, `ProveedorSolicitudRespuestaService`, `ClienteSolicitudDocumentoAdjuntoService`, `SolicitudNotificacionService`, documentos y rutas de almacenamiento (`SolicitudDocumentoPathResolver` si aplica)
 - `app/Repositories/Contracts/SolicitudRepository.php` y `EloquentSolicitudRepository.php`: listados y `paginateForConsultor` (búsqueda y orden)
 - `resources/views/panel/consultor/solicitudes/`: index (gestión), show (gestión/respuesta con offcanvas), modales y partials asociados
 - `resources/views/panel/consultor/informes/`: informe de solicitudes (listado y export CSV)
@@ -197,7 +199,7 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 - `config/sj.php`: URLs opcionales (login: WhatsApp, redes, olvidé contraseña)
 - `public/css/legacy/`: hojas de estilo copiadas/adaptadas del sistema anterior (`plantilla.css`, tablas, etc.)
 - `database/archive/bootstrap_legacy.sql`: volcado de referencia (no sustituye un backup de producción; el flujo normal es migrate + seed).
-- `database/migrations/2026_04_24_*.php`: esquema Laravel + legado SJ.
+- `database/migrations/2026_04_24_*.php` y posteriores: esquema Laravel + legado SJ; extensiones (`canal` / audiencia en historial, visibilidad de adjuntos al cliente `2026_04_25_130000_*`, backfills de historial).
 - `resources/views/panel/cliente/`: inicio, solicitudes (index, create, edit, estado, show), importar, partials de acciones.
 
 ## Pruebas

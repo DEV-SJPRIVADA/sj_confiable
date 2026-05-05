@@ -15,4 +15,7 @@ enum HistorialRespuestaCanal: string
 
     /** Proveedor y usuarios SJ: trámite operativo con el asociado (el cliente NO debe ver estas filas). */
     case SjProveedor = 'sj_proveedor';
+
+    /** Sólo auditoría SJ: trámite interno sin aviso ni historial visible en panel cliente. */
+    case SoloSj = 'solo_sj';
 }

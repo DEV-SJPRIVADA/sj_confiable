@@ -1,13 +1,15 @@
 @php
+    $servicioLinea = trim($s->labelServiciosContratados());
+    if ($servicioLinea === '' || $servicioLinea === '—') {
+        $servicioLinea = '—';
+    }
+    $paqDescExtra = '';
     $paq = $s->paquete;
-    $paqueteTxt = '—';
-    if ($paq) {
-        $n = trim((string) ($paq->nombre ?? ''));
+    if ($paq !== null) {
         $d = trim((string) ($paq->descripcion ?? ''));
-        if ($n !== '') {
-            $paqueteTxt = $n;
-        } elseif ($d !== '') {
-            $paqueteTxt = $d;
+        $n = trim((string) ($paq->nombre ?? ''));
+        if ($d !== '' && $d !== $n) {
+            $paqDescExtra = $d;
         }
     }
     $fmt = function ($v): string {
@@ -33,7 +35,10 @@
                 <div class="row g-2 small">
                     <div class="col-md-6 pe-md-3">
                         <p class="mb-2"><strong>ID:</strong> {{ $s->id }}</p>
-                        <p class="mb-2 text-break"><strong>Paquete:</strong> {{ $paqueteTxt }}</p>
+                        <p class="mb-2 text-break"><strong>Servicio contratado:</strong> {{ $servicioLinea }}</p>
+                        @if ($paqDescExtra !== '')
+                            <p class="mb-2 text-muted small text-break">{{ $paqDescExtra }}</p>
+                        @endif
                         <p class="mb-2"><strong>Ciudad de Solicitud:</strong> {{ $fmt($s->ciudad_solicitud_servicio ?? null) }}</p>
                         <p class="mb-2"><strong>Ciudad de Residencia:</strong> {{ $fmt($s->ciudad_residencia_evaluado ?? null) }}</p>
                         <p class="mb-2"><strong>Documento:</strong> {{ $fmt($s->numero_documento ?? null) }}</p>
@@ -50,14 +55,37 @@
                     </div>
                 </div>
                 <hr class="text-secondary opacity-25 my-3">
-                <h2 class="h6 text-primary mb-2 fw-bold">Archivos Adjuntos</h2>
+                <h2 class="h6 text-primary mb-2 fw-bold">Archivos adjuntos</h2>
                 <div class="solicitud-modal-detalle__archivos rounded-2 p-3 small mb-3">
-                    @if ($s->documentos->isEmpty())
+                    @php
+                        $docsCliente = $s->relationLoaded('documentos') ? $s->documentos : $s->documentos()->get();
+                        $docsOperativos = collect();
+                        $madres = $s->relationLoaded('respuestasMadre')
+                            ? $s->respuestasMadre
+                            : $s->respuestasMadre()->orderByDesc('fecha_creacion')->with('documentos')->get();
+                        foreach ($madres as $rm) {
+                            $dSet = $rm->relationLoaded('documentos') ? $rm->documentos : $rm->documentos()->get();
+                            foreach ($dSet as $dr) {
+                                $docsOperativos->push($dr);
+                            }
+                        }
+                        $hayArchivos = $docsCliente->isNotEmpty() || $docsOperativos->isNotEmpty();
+                    @endphp
+                    @if (! $hayArchivos)
                         <p class="mb-0">No hay archivos adjuntos.</p>
                     @else
                         <ul class="list-unstyled mb-0">
-                            @foreach ($s->documentos as $d)
-                                <li class="mb-1">· {{ $d->nombre_documento ?? '—' }}</li>
+                            @foreach ($docsCliente as $d)
+                                <li class="mb-2">
+                                    <span class="text-muted text-uppercase" style="font-size: 0.7rem;">Solicitud</span><br>
+                                    <span>· {{ $d->nombre_documento ?? '—' }}</span>
+                                </li>
+                            @endforeach
+                            @foreach ($docsOperativos as $dr)
+                                <li class="mb-2">
+                                    <span class="text-muted text-uppercase" style="font-size: 0.7rem;">Respuesta asociado</span><br>
+                                    <span>· {{ $dr->nombre_documentoResp ?? '—' }}</span>
+                                </li>
                             @endforeach
                         </ul>
                     @endif

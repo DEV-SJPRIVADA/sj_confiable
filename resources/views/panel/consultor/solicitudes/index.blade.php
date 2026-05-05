@@ -283,7 +283,7 @@
                     <div class="solicitud-acciones">
                         @php $nDocFila = (int) ($s->documentos_count ?? 0); @endphp
                         @if ($nDocFila > 0)
-                            <a href="{{ route($detalleRoute, $s) }}#documentos" class="solicitud-accion-btn solicitud-accion-btn--doc" aria-label="Ver documentos ({{ $nDocFila }}) de la solicitud">
+                            <a href="{{ route($detalleRoute, $s) }}#consultor-main-documentos" class="solicitud-accion-btn solicitud-accion-btn--doc" aria-label="Ver documentos ({{ $nDocFila }}) de la solicitud">
                                 <img src="{{ asset('images/pdf.png') }}" alt="" class="solicitud-doc-pdf-img" loading="lazy" decoding="async">
                                 <span class="solicitud-doc-badge">{{ $nDocFila }}</span>
                             </a>

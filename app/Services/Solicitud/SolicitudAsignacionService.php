@@ -14,13 +14,11 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Transaccional con el flujo de `procesos/reportesAdmin/asignarSolicitud.php` (Laravel: sin PHPMailer aquí; correos vía notificaciones en siguiente iteración).
+ *
+ * La asignación al asociado no genera avisos en `notificaciones_cliente`: el cliente no participa del canal operativo SJ↔proveedor.
  */
 final class SolicitudAsignacionService
 {
-    public function __construct(
-        private readonly SolicitudNotificacionService $notificacionesSolicitud,
-    ) {}
-
     public function asignar(
         Solicitud $solicitud,
         int $idProveedor,
@@ -37,11 +35,8 @@ final class SolicitudAsignacionService
         $comercial = trim((string) ($proveedor->nombre_comercial ?? ''));
         $nombreProveedor = $comercial !== '' ? $comercial : (string) $proveedor->razon_social_proveedor;
 
-        $notificacionesSolicitud = $this->notificacionesSolicitud;
-
         DB::transaction(function () use (
             $solicitud,
-            $notificacionesSolicitud,
             $idProveedor,
             $clienteFinal,
             $tipoCliente,
@@ -72,13 +67,6 @@ final class SolicitudAsignacionService
                 'fecha_respuesta' => now(),
                 'canal' => HistorialRespuestaCanal::SjProveedor->value,
             ]);
-
-            $mensajeCli = "Su solicitud #$idSolicitud de $tipoNombre ha recibido una nueva respuesta. Nuevo estado: En proceso.";
-            if (str_contains($mensajeCli, (string) $idSolicitud) === false) {
-                $mensajeCli .= " (Solicitud #$idSolicitud)";
-            }
-
-            $notificacionesSolicitud->mensajeParaOrganizacionCliente($solicitud, $mensajeCli);
 
             $mensajeProv = "Se le ha asignado la solicitud #$idSolicitud de $tipoNombre.";
             if ($clienteFinal !== null && $clienteFinal !== '') {

@@ -19,6 +19,7 @@ class DocumentoRespuesta extends Model
     {
         return [
             'fecha_subidaResp' => 'datetime',
+            'visible_para_cliente' => 'boolean',
         ];
     }
 

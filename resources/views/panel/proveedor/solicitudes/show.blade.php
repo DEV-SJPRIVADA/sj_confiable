@@ -17,9 +17,16 @@
 
 @section('content')
 <div class="panel-proveedor-solicitudes-page">
-    <p class="mb-3 pt-2">
-        <a href="{{ route('panel.proveedor.solicitudes.index') }}" class="text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Volver al listado</a>
-    </p>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pt-2">
+        <p class="mb-0">
+            <a href="{{ route('panel.proveedor.solicitudes.index') }}" class="text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Volver al listado</a>
+        </p>
+        @can('respondAsProveedor', $solicitud)
+            <a href="{{ route('panel.proveedor.solicitudes.respuesta', $solicitud) }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-reply fa-flip-horizontal me-1" aria-hidden="true"></i>Gestionar respuesta
+            </a>
+        @endcan
+    </div>
     @include('panel.solicitudes._detalle', ['solicitud' => $solicitud])
 </div>
 @endsection

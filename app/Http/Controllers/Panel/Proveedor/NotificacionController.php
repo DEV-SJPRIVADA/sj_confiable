@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Panel\Proveedor;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MarcarNotificacionesProveedorRequest;
+use App\Models\Solicitud;
 use App\Services\Panel\NotificacionProveedorService;
 use Illuminate\Http\RedirectResponse;
 
@@ -21,6 +22,17 @@ class NotificacionController extends Controller
         }
         $todas = $request->boolean('todas');
         $service->marcarLeidas($request->user(), array_map('intval', $ids), $todas);
+
+        $abrirSid = $request->input('redirect_abrir_modal_solicitud');
+        if (is_numeric($abrirSid) && (int) $abrirSid > 0) {
+            $solicitud = Solicitud::query()->find((int) $abrirSid);
+            if ($solicitud !== null && $request->user()->can('view', $solicitud)) {
+                return redirect()
+                    ->route('panel.proveedor.solicitudes.index')
+                    ->with('status', 'Notificación marcada como leída.')
+                    ->with('open_modal_solicitud_id', (int) $abrirSid);
+            }
+        }
 
         return redirect()->back()->with('status', 'Notificaciones actualizadas.');
     }

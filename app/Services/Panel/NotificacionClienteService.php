@@ -76,7 +76,42 @@ final class NotificacionClienteService
 
     public function urlDetalle(NotificacionCliente $n): string
     {
-        return route('panel.cliente.solicitudes.estado', ['solicitud' => $n->id_solicitud]);
+        return route('panel.cliente.solicitudes.estado', [
+            'solicitud' => $n->id_solicitud,
+            'nc' => (int) $n->id,
+        ]);
+    }
+
+    /**
+     * Al abrir “ver estado” desde la campanita: marca leída si corresponde al destinatario y a la solicitud.
+     */
+    public function marcarLeidaAlSeguirEnlace(Usuario $usuario, int $notificacionId, int $solicitudIdEsperada): void
+    {
+        if ($notificacionId <= 0) {
+            return;
+        }
+
+        $idUsuario = $this->resolverIdUsuarioPanelCliente($usuario);
+        if ($idUsuario === null) {
+            return;
+        }
+
+        $notif = NotificacionCliente::query()
+            ->where('id_usuario_destino', $idUsuario)
+            ->whereKey($notificacionId)
+            ->first();
+
+        if ($notif === null) {
+            return;
+        }
+
+        if ((int) $notif->id_solicitud !== $solicitudIdEsperada) {
+            return;
+        }
+
+        if (! $notif->leido) {
+            NotificacionCliente::query()->whereKey($notificacionId)->update(['leido' => 1]);
+        }
     }
 
     private function resolverIdUsuarioPanelCliente(Usuario $usuario): ?int
