@@ -36,6 +36,8 @@ php artisan db:seed
 
 **Importante:** no subir el archivo `.env` al repositorio. Para un entorno nuevo, parta de `.env.example` y defina claves reales o de desarrollo de forma local.
 
+**UAT / servidor:** para levantar el subdominio de pruebas desde cero (DNS, BD, `public`, migraciones y checklist), ver [`docs/uat-deploy-from-scratch.md`](docs/uat-deploy-from-scratch.md).
+
 #### Variables de entorno útiles (desarrollo)
 
 | Variable | Descripción |
