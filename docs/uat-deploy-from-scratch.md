@@ -2,6 +2,23 @@
 
 Guía para montar un **entorno UAT nuevo** (Hostinger u hospedaje similar: PHP 8.2+, MySQL, panel web). Ajusta rutas si tu proveedor usa otros nombres.
 
+## Cero riesgo para lo que ya funciona (producción)
+
+El UAT debe ser **otro sitio**, no un “cambio” encima del actual. Si seguís estas reglas, **no tocáis** el sistema que ya está en línea:
+
+| Qué | Producción (no tocar salvo despliegue acordado) | UAT (solo esto para ensayar) |
+|-----|--------------------------------------------------|------------------------------|
+| URL | Dominio principal / carpeta que ya usan los usuarios | Solo **subdominio** nuevo, p. ej. `uat.sjconfiable.com` |
+| Carpeta en el servidor | La carpeta/document root que ya tiene el sitio vivo | **Otra carpeta** exclusiva para UAT (nunca sobrescribir la de prod al subir ZIP o Git) |
+| Base de datos | BD que usa el sitio en producción | **BD nueva** solo para UAT; usuario MySQL con permisos **solo** sobre esa BD |
+| `.env` | El `.env` del sitio en producción | **Archivo aparte** solo en la carpeta del UAT (`APP_URL`, `DB_*`, `APP_KEY` propios) |
+| DNS | Registros del dominio principal si ya sirven al público | Solo **añadir** el registro del subdominio `uat` (A/CNAME); no borrar los registros que apuntan a producción |
+| Migraciones / seed | Solo en prod cuando el equipo decida desplegar | Corré `migrate` / `db:seed` **solo** contra la BD UAT |
+
+**Errores típicos que sí pueden romper o mezclar entornos:** apuntar `uat` al mismo document root que prod; reutilizar la misma `DB_DATABASE` que prod; editar el `.env` del sitio vivo pensando que es UAT; ejecutar `migrate:fresh` en la BD equivocada.
+
+Antes de borrar algo “viejo” del servidor, confirmá que **no** es la carpeta ni la BD del sitio en producción.
+
 ## 1. Decisiones previas
 
 | Decisión | Recomendación UAT |
@@ -139,11 +156,12 @@ Activá **SSL gratis** (Let’s Encrypt) en el panel para `uat.sjconfiable.com` 
 
 ## Checklist mínimo
 
-- [ ] Subdominio creado y DNS resolviendo al servidor correcto.
-- [ ] Document root = `public` de Laravel (o equivalente).
-- [ ] BD MySQL dedicada UAT y credenciales en `.env`.
-- [ ] `APP_KEY` generado; `APP_URL` con https.
-- [ ] `composer install` + `php artisan migrate --force`.
+- [ ] **Confirmado:** carpeta y BD UAT son **distintas** de las de producción (nombres anotados).
+- [ ] Subdominio creado y DNS resolviendo al servidor correcto (sin borrar registros de prod).
+- [ ] Document root = `public` de Laravel **solo en la carpeta UAT** (o equivalente).
+- [ ] BD MySQL dedicada UAT y credenciales **solo** en el `.env` del UAT.
+- [ ] `APP_KEY` generado; `APP_URL` con https apuntando al subdominio UAT.
+- [ ] `composer install` + `php artisan migrate --force` ejecutados **en el proyecto UAT** contra la BD UAT.
 - [ ] Permisos `storage` / `bootstrap/cache` + `storage:link`.
 - [ ] SSL activo para el subdominio.
 
