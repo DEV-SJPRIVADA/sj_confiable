@@ -9,7 +9,9 @@ use App\Models\Cliente;
 use App\Models\RespuestaSolicitud;
 use App\Models\Solicitud;
 use App\Models\Usuario;
+use App\Support\RespuestaSolicitudHistorial;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Registro de solicitud desde el panel cliente (criterio legado: creador = usuario de la sesión, empresa = cliente vinculado).
@@ -96,15 +98,16 @@ final class ClienteSolicitudCreacionService
             }
 
             $ahora = now();
-            RespuestaSolicitud::query()->create([
-                'solicitud_id' => (int) $solicitud->id,
-                'usuario_id' => (int) $actor->id_usuario,
-                'respuesta' => $textoHistorial,
-                'estado_anterior' => null,
-                'estado_actual' => 'Registrado',
-                'fecha_respuesta' => $ahora,
-                'canal' => HistorialRespuestaCanal::ClienteSj->value,
-            ]);
+            RespuestaSolicitud::query()->create(
+                RespuestaSolicitudHistorial::atributos([
+                    'solicitud_id' => (int) $solicitud->id,
+                    'usuario_id' => (int) $actor->id_usuario,
+                    'respuesta' => $textoHistorial,
+                    'estado_anterior' => null,
+                    'estado_actual' => 'Registrado',
+                    'fecha_respuesta' => $ahora,
+                ], HistorialRespuestaCanal::ClienteSj),
+            );
 
             if ($paqueteId === null && $servicioIds !== []) {
                 foreach ($servicioIds as $sid) {
@@ -118,9 +121,22 @@ final class ClienteSolicitudCreacionService
             return $solicitud;
         });
 
-        $solicitudFresh = $solicitud->fresh();
-        if ($solicitudFresh !== null) {
-            $this->notificacionesSolicitud->nuevaSolicitudDesdeCliente($solicitudFresh);
+        $idSol = (int) $solicitud->id;
+        if ($idSol > 0) {
+            $notificaciones = $this->notificacionesSolicitud;
+            app()->terminating(static function () use ($notificaciones, $idSol): void {
+                try {
+                    $fresh = Solicitud::query()->find($idSol);
+                    if ($fresh !== null) {
+                        $notificaciones->nuevaSolicitudDesdeCliente($fresh);
+                    }
+                } catch (\Throwable $e) {
+                    Log::error('No se pudo notificar nueva solicitud a consultores SJ.', [
+                        'solicitud_id' => $idSol,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            });
         }
 
         return $solicitud;

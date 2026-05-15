@@ -10,6 +10,7 @@ use App\Repositories\Contracts\SolicitudRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 final class EloquentSolicitudRepository implements SolicitudRepository
 {
@@ -156,7 +157,7 @@ final class EloquentSolicitudRepository implements SolicitudRepository
 
     public function findForEstadoCliente(int $id): Solicitud
     {
-        $soloCliente = static fn ($q) => $q->where('visible_para_cliente', true);
+        $adjuntosCliente = $this->eagerAdjuntosVisiblesCliente(HistorialRespuestaCanal::ClienteSj);
 
         return Solicitud::query()
             ->with([
@@ -166,20 +167,24 @@ final class EloquentSolicitudRepository implements SolicitudRepository
                 'servicio',
                 'serviciosPivote',
                 'paquete',
-                'documentos' => $soloCliente,
+                'documentos' => $adjuntosCliente,
                 'historialRespuestas' => $this->scopeHistorialEagerLoads(HistorialRespuestaCanal::ClienteSj),
                 'respuestasMadre.usuario.persona',
-                'respuestasMadre.documentos' => $soloCliente,
+                'respuestasMadre.documentos' => $adjuntosCliente,
             ])
             ->findOrFail($id);
     }
 
     /**
-     * @return Closure(object):void
+     * @return \Closure(object):void
      */
     private function eagerAdjuntosVisiblesCliente(?HistorialRespuestaCanal $historialParaCanal): \Closure
     {
-        if ($historialParaCanal === HistorialRespuestaCanal::ClienteSj) {
+        if ($historialParaCanal !== HistorialRespuestaCanal::ClienteSj) {
+            return static function (): void {};
+        }
+
+        if ($this->documentosTienenVisibilidadCliente()) {
             return static fn ($q) => $q->where('visible_para_cliente', true);
         }
 
@@ -191,12 +196,25 @@ final class EloquentSolicitudRepository implements SolicitudRepository
      */
     private function scopeHistorialEagerLoads(?HistorialRespuestaCanal $soloCanal): \Closure
     {
-        return static function ($query) use ($soloCanal): void {
-            if ($soloCanal !== null) {
+        $filtrarCanal = $soloCanal !== null && $this->historialTieneCanal();
+
+        return function ($query) use ($soloCanal, $filtrarCanal): void {
+            if ($filtrarCanal && $soloCanal !== null) {
                 $query->where('canal', $soloCanal->value);
             }
-            $query->orderByDesc('fecha_respuesta')->with(['usuario.proveedor']);
+            $query->orderByDesc('fecha_respuesta')->with(['usuario.proveedor', 'usuario.persona']);
         };
+    }
+
+    private function historialTieneCanal(): bool
+    {
+        return Schema::hasColumn('respuesta_solicitudes', 'canal');
+    }
+
+    private function documentosTienenVisibilidadCliente(): bool
+    {
+        return Schema::hasColumn('documentos', 'visible_para_cliente')
+            && Schema::hasColumn('documentos_respuesta', 'visible_para_cliente');
     }
 
     /**

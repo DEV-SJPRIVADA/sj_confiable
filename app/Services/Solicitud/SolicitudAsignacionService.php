@@ -10,6 +10,7 @@ use App\Models\Proveedor;
 use App\Models\RespuestaSolicitud;
 use App\Models\Solicitud;
 use App\Models\Usuario;
+use App\Support\RespuestaSolicitudHistorial;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -30,6 +31,7 @@ final class SolicitudAsignacionService
         ?string $clienteFinal,
         ?string $tipoCliente,
         int $idUsuarioActor,
+        ?string $comentarioAsignacion = null,
     ): void {
         $solicitud->loadMissing(['servicio', 'creador.cliente', 'creador']);
 
@@ -49,6 +51,17 @@ final class SolicitudAsignacionService
         }
         $mensajeProv .= ' Por favor ingrese a la plataforma para gestionarla.';
 
+        $comentario = trim((string) ($comentarioAsignacion ?? ''));
+
+        $textoHistorialAsignacion = sprintf(
+            'Solicitud asignada al asociado de negocio %s.',
+            $nombreProveedor,
+        );
+        if ($comentario !== '') {
+            $textoHistorialAsignacion .= "\n\nComentario:\n".$comentario;
+            $mensajeProv .= "\n\nComentario del consultor:\n".$comentario;
+        }
+
         DB::transaction(function () use (
             $solicitud,
             $idProveedor,
@@ -59,7 +72,10 @@ final class SolicitudAsignacionService
             $idUsuarioActor,
             $nombreProveedor,
             $mensajeProv,
+            $textoHistorialAsignacion,
         ): void {
+            $estadoPrevio = trim((string) ($solicitud->estado ?? ''));
+
             $solicitud->estado = 'En proceso';
             $solicitud->id_proveedor = $idProveedor;
             $solicitud->fecha_asignacion_proveedor = now();
@@ -73,24 +89,27 @@ final class SolicitudAsignacionService
 
             $solicitud->save();
 
-            RespuestaSolicitud::query()->create([
-                'solicitud_id' => $idSolicitud,
-                'usuario_id' => $idUsuarioActor,
-                'respuesta' => 'En proceso',
-                'estado_anterior' => 'Registrado',
-                'estado_actual' => 'En proceso',
-                'fecha_respuesta' => now(),
-                'canal' => HistorialRespuestaCanal::SjProveedor->value,
-            ]);
+            RespuestaSolicitud::query()->create(
+                RespuestaSolicitudHistorial::atributos([
+                    'solicitud_id' => $idSolicitud,
+                    'usuario_id' => $idUsuarioActor,
+                    'respuesta' => $textoHistorialAsignacion,
+                    'estado_anterior' => $estadoPrevio !== '' ? $estadoPrevio : null,
+                    'estado_actual' => 'En proceso',
+                    'fecha_respuesta' => now(),
+                ], HistorialRespuestaCanal::SjProveedor),
+            );
 
             $usuariosProveedor = Usuario::query()
                 ->where('id_proveedor', $idProveedor)
                 ->where('activo', 1)
                 ->get();
 
+            $tipoNotif = mb_substr($tipoNombre, 0, 30);
+
             foreach ($usuariosProveedor as $u) {
                 NotificacionProveedor::query()->create([
-                    'tipo' => $tipoNombre,
+                    'tipo' => $tipoNotif,
                     'proveedor_nombre' => $nombreProveedor,
                     'id_solicitud' => $idSolicitud,
                     'mensaje' => $mensajeProv,
@@ -102,12 +121,26 @@ final class SolicitudAsignacionService
             }
         });
 
-        $this->correos->asignacionParaProveedor(
+        $solicitud->refresh();
+        $nombreClienteFinal = $this->correos->nombreClienteFinalParaAviso($solicitud);
+
+        // Correo tras enviar la respuesta HTTP (evita 500 por timeout SMTP antes del redirect).
+        $correos = $this->correos;
+        app()->terminating(static function () use (
+            $correos,
             $idProveedor,
             $tipoNombre,
-            $nombreProveedor,
+            $nombreClienteFinal,
             $idSolicitud,
             $mensajeProv,
-        );
+        ): void {
+            $correos->asignacionParaProveedor(
+                $idProveedor,
+                $tipoNombre,
+                $nombreClienteFinal,
+                $idSolicitud,
+                $mensajeProv,
+            );
+        });
     }
 }

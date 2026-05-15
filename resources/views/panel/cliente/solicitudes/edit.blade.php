@@ -61,7 +61,7 @@
 
     <div class="cli-edit-form-card px-3 px-md-4 py-4">
         <h1 class="cli-edit-title text-center fw-bold mb-2 text-primary">Editar Solicitud #{{ $solicitud->id }}</h1>
-        <p class="text-muted small text-center mb-4">Solo puede modificar solicitudes en estado <strong>Registrado</strong>.</p>
+        <p class="text-muted small text-center mb-4">Actualice los datos mientras la solicitud esté activa y no esté completada (paridad sistema anterior).</p>
 
         <form method="post" action="{{ route('panel.cliente.solicitudes.update', $solicitud) }}" id="formEditSolicitudCliente" novalidate>
             @csrf

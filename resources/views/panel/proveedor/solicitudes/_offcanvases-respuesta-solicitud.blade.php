@@ -74,23 +74,13 @@
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
     </div>
     <div class="offcanvas-body p-0">
-        <div class="p-3 prov-resp-hist-body">
-            @forelse ($solicitud->historialRespuestas as $h)
-                <div class="prov-resp-hist-item border-bottom pb-3 mb-3">
-                    <div class="small">
-                        <span class="fw-semibold">{{ $h->usuario?->usuario ?? '—' }}</span>
-                        <span class="text-muted">{{ $h->fecha_respuesta?->format('d/m/Y h:i A') ?? '—' }}</span>
-                    </div>
-                    <div class="small mt-2 text-break">{{ $h->respuesta }}</div>
-                    @if ($h->estado_anterior !== null || $h->estado_actual !== null)
-                        <div class="small text-muted mt-2">
-                            Estado: {{ $h->estado_anterior ?? '—' }} → {{ $h->estado_actual ?? '—' }}
-                        </div>
-                    @endif
-                </div>
-            @empty
-                <p class="text-muted small mb-0">Sin movimientos registrados en historial.</p>
-            @endforelse
+        <div class="p-3 prov-resp-hist-body card-body--chat">
+            @include('panel.solicitudes._fragment-historial-chat', [
+                'solicitud' => $solicitud,
+                'idPrefix' => $idPx ?? 'prov-oc',
+                'modo' => 'proveedor',
+            ])
+
         </div>
     </div>
 </div>

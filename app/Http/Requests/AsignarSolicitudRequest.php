@@ -34,6 +34,7 @@ class AsignarSolicitudRequest extends FormRequest
             ],
             'cliente_final' => ['nullable', 'string', 'max:150'],
             'tipo_cliente' => ['nullable', 'string', Rule::in(['Interno', 'Externo'])],
+            'comentario_asignacion' => ['nullable', 'string', 'max:2000'],
         ];
     }
 
@@ -54,5 +55,16 @@ class AsignarSolicitudRequest extends FormRequest
         $v = $this->validated('tipo_cliente');
 
         return $v === null || $v === '' ? null : $v;
+    }
+
+    public function comentarioAsignacion(): ?string
+    {
+        $v = $this->validated('comentario_asignacion');
+        if ($v === null || ! is_string($v)) {
+            return null;
+        }
+        $t = trim($v);
+
+        return $t !== '' ? $t : null;
     }
 }

@@ -74,41 +74,8 @@
         border-radius: 0 !important;
     }
     .cli-solic-historial-body {
-        background: #fff;
+        background: #f0f2f5;
         padding: 1rem 1rem 1.1rem !important;
-    }
-    .cli-solic-timeline-entry {
-        position: relative;
-        padding: 0 0 1.15rem 1rem;
-        margin: 0 0 1.05rem 0;
-        border-bottom: 1px solid #e9ecef;
-        border-left: 4px solid #0d6efd;
-    }
-    .cli-solic-timeline-entry:last-child {
-        margin-bottom: 0 !important;
-        padding-bottom: 0 !important;
-        border-bottom: none;
-    }
-    .cli-solic-timeline-user {
-        font-weight: 600;
-        font-size: 0.875rem;
-        color: #0d6efd;
-    }
-    .cli-solic-timeline-fecha {
-        font-size: 0.875rem;
-        color: #6c757d;
-        white-space: nowrap;
-    }
-    .cli-solic-timeline-texto {
-        font-size: 0.875rem;
-        color: #333;
-        margin-bottom: 0.35rem !important;
-        line-height: 1.5;
-    }
-    .cli-solic-timeline-estado {
-        font-size: 0.8125rem;
-        color: #6c757d;
-        margin-bottom: 0 !important;
     }
     .cli-solic-doc-row { border-bottom: 1px solid #eee; }
     .cli-solic-doc-row:last-of-type { border-bottom: none; }
@@ -233,30 +200,17 @@
     </div>
 
     <div class="col-lg-8">
-        <div class="card border-0 cli-solic-estado-card overflow-hidden h-100">
+        <div class="card border-0 cli-solic-estado-card overflow-hidden h-100 sj-hist-chat-wrap">
             <div class="card-header cli-solic-historial-head py-2 px-3 d-flex align-items-center gap-2">
                 <i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
                 Historial de Respuestas
             </div>
             <div class="card-body cli-solic-historial-body border-top-0">
-                @if ($solicitud->historialRespuestas->isEmpty())
-                    <p class="text-muted small mb-0">Sin movimientos en el historial.</p>
-                @else
-                    @foreach ($solicitud->historialRespuestas as $h)
-                        <div class="cli-solic-timeline-entry">
-                            <div class="d-flex flex-wrap justify-content-between gap-2 align-items-baseline mb-1">
-                                <span class="cli-solic-timeline-user">{{ $h->usuario?->usuario ?? '—' }}</span>
-                                <span class="cli-solic-timeline-fecha">{{ $h->fecha_respuesta?->format('d/m/Y h:i A') ?? '—' }}</span>
-                            </div>
-                            <p class="cli-solic-timeline-texto">{!! nl2br(e($h->respuesta)) !!}</p>
-                            @if ($h->estado_anterior || $h->estado_actual)
-                                <p class="cli-solic-timeline-estado mb-0">
-                                    Estado: {{ $h->estado_anterior ?? '—' }} -> {{ $h->estado_actual ?? '—' }}
-                                </p>
-                            @endif
-                        </div>
-                    @endforeach
-                @endif
+                @include('panel.solicitudes._fragment-historial-chat', [
+                    'solicitud' => $solicitud,
+                    'idPrefix' => 'cli-estado',
+                    'modo' => 'cliente',
+                ])
             </div>
         </div>
     </div>

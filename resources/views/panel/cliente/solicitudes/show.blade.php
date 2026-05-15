@@ -176,7 +176,7 @@
                     @can('openClienteEdit', $solicitud)
                         <a href="{{ route('panel.cliente.solicitudes.edit', $solicitud) }}"
                            class="cli-btn-edit-legado-link text-decoration-none ms-auto"
-                           title="{{ auth()->user()->can('update', $solicitud) ? 'Editar solicitud' : 'Consultar pantalla editar (solo guardar en estado Registrado)' }}"
+                           title="Editar solicitud"
                            aria-label="Editar solicitud">
                             <span class="cli-btn-edit-legado d-inline-flex align-items-center justify-content-center" aria-hidden="true">
                                 <i class="fas fa-edit" aria-hidden="true"></i>

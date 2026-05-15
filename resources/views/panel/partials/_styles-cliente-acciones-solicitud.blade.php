@@ -4,6 +4,11 @@
         filter: grayscale(0.35);
         pointer-events: none;
     }
+    .sol-cli-acciones-td .sol-cli-acc--disabled {
+        opacity: 0.55;
+        cursor: not-allowed !important;
+        pointer-events: none;
+    }
     .sol-cli-acciones-td .sol-cli-acc.sol-cli-acc--neutro,
     .sol-cli-acciones-td button.sol-cli-acc.sol-cli-acc--neutro,
     .sol-cli-acciones-td button.sol-cli-cancel-btn {

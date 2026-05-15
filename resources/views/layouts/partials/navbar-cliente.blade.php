@@ -98,3 +98,4 @@
     </div>
 </nav>
 @include('layouts.partials.modal-notificaciones-cliente')
+@include('panel.partials._modal-anular-solicitud-cliente')

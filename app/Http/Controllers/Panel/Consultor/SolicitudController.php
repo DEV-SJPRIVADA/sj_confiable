@@ -133,6 +133,7 @@ class SolicitudController extends Controller
             $request->clienteFinal(),
             $request->tipoCliente(),
             (int) $actor->id_usuario,
+            $request->comentarioAsignacion(),
         );
 
         return redirect()

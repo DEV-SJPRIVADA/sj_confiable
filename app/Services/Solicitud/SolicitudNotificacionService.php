@@ -6,6 +6,8 @@ namespace App\Services\Solicitud;
 
 use App\Models\Notificacion;
 use App\Models\NotificacionCliente;
+use App\Models\NotificacionProveedor;
+use App\Models\Proveedor;
 use App\Models\Solicitud;
 use App\Models\Usuario;
 use Illuminate\Support\Collection;
@@ -54,6 +56,110 @@ final class SolicitudNotificacionService
             $idSol,
             $mensajeConsultor,
             $this->correos->lineaCreadorSolicitud($solicitud),
+        );
+    }
+
+    /**
+     * La organización cliente modifica datos de la solicitud: aviso a consultores SJ.
+     */
+    public function solicitudEditadaPorCliente(Solicitud $solicitud, Usuario $actor): void
+    {
+        $solicitud->loadMissing(['creador.cliente', 'creador.persona', 'serviciosPivote', 'servicio', 'paquete']);
+        $razonCliente = (string) ($solicitud->creador?->cliente?->razon_social ?? '—');
+        $nombreClienteFinal = $this->correos->nombreClienteFinalParaAviso($solicitud);
+        $tipo = $this->truncarTipo((string) $solicitud->labelServiciosContratados());
+        $idSol = (int) $solicitud->id;
+        $login = trim((string) ($actor->usuario ?? ''));
+
+        $mensajeConsultor = sprintf(
+            'El cliente %s modificó la solicitud #%d (%s). Usuario: %s.',
+            $razonCliente,
+            $idSol,
+            $tipo,
+            $login !== '' ? $login : '—',
+        );
+
+        $this->broadcastConsultoresSj($tipo, $razonCliente, $idSol, $mensajeConsultor);
+
+        $this->correos->edicionParaConsultoresSj(
+            $tipo,
+            $nombreClienteFinal,
+            $idSol,
+            $mensajeConsultor,
+            $this->correos->lineaCreadorSolicitud($solicitud),
+            $razonCliente,
+        );
+    }
+
+    /**
+     * La organización cliente cancela / inactiva la solicitud: aviso a consultores SJ.
+     */
+    public function solicitudCanceladaPorCliente(Solicitud $solicitud, Usuario $actor): void
+    {
+        $solicitud->loadMissing(['creador.cliente', 'creador.persona', 'serviciosPivote', 'servicio', 'paquete', 'proveedorAsignado']);
+        $razonCliente = (string) ($solicitud->creador?->cliente?->razon_social ?? '—');
+        $nombreClienteFinal = $this->correos->nombreClienteFinalParaAviso($solicitud);
+        $tipo = $this->truncarTipo((string) $solicitud->labelServiciosContratados());
+        $idSol = (int) $solicitud->id;
+        $login = trim((string) ($actor->usuario ?? ''));
+
+        $mensajeConsultor = sprintf(
+            'El cliente %s canceló la solicitud #%d (%s). Usuario: %s.',
+            $razonCliente,
+            $idSol,
+            $tipo,
+            $login !== '' ? $login : '—',
+        );
+
+        $this->broadcastConsultoresSj($tipo, $razonCliente, $idSol, $mensajeConsultor);
+
+        $this->correos->cancelacionParaConsultoresSj(
+            $tipo,
+            $nombreClienteFinal,
+            $idSol,
+            $mensajeConsultor,
+            $this->correos->lineaCreadorSolicitud($solicitud),
+            $razonCliente,
+        );
+
+        $idProveedor = (int) ($solicitud->id_proveedor ?? 0);
+        if ($idProveedor <= 0) {
+            return;
+        }
+
+        $proveedor = $solicitud->proveedorAsignado ?? Proveedor::query()->whereKey($idProveedor)->first();
+        $nombreProveedor = $this->nombreComercialProveedor($proveedor);
+        $mensajeProveedor = sprintf(
+            'La organización cliente canceló la solicitud #%d (%s). Cliente final: %s.',
+            $idSol,
+            $tipo,
+            $nombreClienteFinal,
+        );
+
+        $usuariosProveedor = Usuario::query()
+            ->where('id_proveedor', $idProveedor)
+            ->where('activo', 1)
+            ->get();
+
+        foreach ($usuariosProveedor as $u) {
+            NotificacionProveedor::query()->create([
+                'tipo' => $tipo,
+                'proveedor_nombre' => $nombreProveedor,
+                'id_solicitud' => $idSol,
+                'mensaje' => mb_substr($mensajeProveedor, 0, 255),
+                'id_proveedor_destino' => $idProveedor,
+                'id_usuario_destino' => (int) $u->id_usuario,
+                'leido' => 0,
+                'fecha' => now(),
+            ]);
+        }
+
+        $this->correos->cancelacionParaProveedor(
+            $idProveedor,
+            $tipo,
+            $nombreClienteFinal,
+            $idSol,
+            $mensajeProveedor,
         );
     }
 
@@ -156,5 +262,21 @@ final class SolicitudNotificacionService
         $t = trim($raw);
 
         return $t === '' ? 'solicitud' : mb_substr($t, 0, 30);
+    }
+
+    private function nombreComercialProveedor(?Proveedor $proveedor): string
+    {
+        if ($proveedor === null) {
+            return '—';
+        }
+
+        $comercial = trim((string) ($proveedor->nombre_comercial ?? ''));
+        if ($comercial !== '') {
+            return $comercial;
+        }
+
+        $razon = trim((string) ($proveedor->razon_social_proveedor ?? ''));
+
+        return $razon !== '' ? $razon : '—';
     }
 }

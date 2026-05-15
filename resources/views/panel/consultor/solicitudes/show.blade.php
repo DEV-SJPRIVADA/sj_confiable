@@ -247,6 +247,19 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="mb-4">
+                    <label for="comentario_asignacion" class="form-label fw-semibold">Mensaje para el asociado (opcional)</label>
+                    <textarea
+                        name="comentario_asignacion"
+                        id="comentario_asignacion"
+                        class="form-control"
+                        rows="4"
+                        maxlength="2000"
+                        placeholder="Instrucciones o contexto para el asociado de negocio. Se verá en el historial operativo y en la notificación."
+                    >{{ old('comentario_asignacion') }}</textarea>
+                    <div class="form-text">Queda registrado en el historial de la solicitud y se incluye en el aviso al asociado.</div>
+                    @error('comentario_asignacion')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                </div>
                 <div class="d-flex flex-wrap">
                     <button type="submit" class="btn btn-outline-primary text-uppercase fw-semibold px-4 d-inline-flex align-items-center gap-2">
                         <i class="fas fa-user-plus" aria-hidden="true"></i>
@@ -530,3 +543,4 @@
 })();
 </script>
 @endpush
+

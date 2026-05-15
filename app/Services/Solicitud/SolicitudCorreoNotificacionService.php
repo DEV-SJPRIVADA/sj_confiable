@@ -40,6 +40,30 @@ final class SolicitudCorreoNotificacionService
         $this->enviarAConsultoresSj($tipo, $razonCliente, $idSolicitud, $mensaje, $asunto);
     }
 
+    public function cancelacionParaConsultoresSj(
+        string $tipo,
+        string $nombreClienteFinal,
+        int $idSolicitud,
+        string $mensaje,
+        ?string $usuarioLinea = null,
+        ?string $razonOrganizacionAsunto = null,
+    ): void {
+        $asunto = 'Solicitud cancelada #'.$idSolicitud.' - '.($razonOrganizacionAsunto ?? $nombreClienteFinal);
+        $this->enviarAConsultoresSj($tipo, $nombreClienteFinal, $idSolicitud, $mensaje, $asunto, $usuarioLinea);
+    }
+
+    public function edicionParaConsultoresSj(
+        string $tipo,
+        string $nombreClienteFinal,
+        int $idSolicitud,
+        string $mensaje,
+        ?string $usuarioLinea = null,
+        ?string $razonOrganizacionAsunto = null,
+    ): void {
+        $asunto = 'Solicitud modificada #'.$idSolicitud.' - '.($razonOrganizacionAsunto ?? $nombreClienteFinal);
+        $this->enviarAConsultoresSj($tipo, $nombreClienteFinal, $idSolicitud, $mensaje, $asunto, $usuarioLinea);
+    }
+
     public function mensajeParaOrganizacionCliente(
         int $idCliente,
         string $tipo,
@@ -69,7 +93,7 @@ final class SolicitudCorreoNotificacionService
     public function asignacionParaProveedor(
         int $idProveedor,
         string $tipo,
-        string $nombreProveedor,
+        string $nombreClienteFinal,
         int $idSolicitud,
         string $mensaje,
     ): void {
@@ -84,12 +108,61 @@ final class SolicitudCorreoNotificacionService
         $this->enviarVarios($emails, new SolicitudAvisoMail(
             $asunto,
             $tipo,
-            $nombreProveedor,
+            $nombreClienteFinal,
             $mensaje,
             $idSolicitud,
             null,
             $url,
         ));
+    }
+
+    public function cancelacionParaProveedor(
+        int $idProveedor,
+        string $tipo,
+        string $nombreClienteFinal,
+        int $idSolicitud,
+        string $mensaje,
+    ): void {
+        if (! $this->correosHabilitados()) {
+            return;
+        }
+
+        $emails = $this->emailsProveedor($idProveedor);
+        $asunto = 'Solicitud cancelada #'.$idSolicitud;
+        $url = $this->urlPlataforma();
+
+        $this->enviarVarios($emails, new SolicitudAvisoMail(
+            $asunto,
+            $tipo,
+            $nombreClienteFinal,
+            $mensaje,
+            $idSolicitud,
+            null,
+            $url,
+        ));
+    }
+
+    /**
+     * Nombre del cliente final de la solicitud (campo «Cliente» en correos al proveedor).
+     * Si no hay cliente_final, usa la razón social de la organización creadora.
+     */
+    public function nombreClienteFinalParaAviso(Solicitud $solicitud): string
+    {
+        $solicitud->loadMissing(['creador.cliente']);
+
+        $final = trim((string) ($solicitud->cliente_final ?? ''));
+        if ($final !== '') {
+            return $final;
+        }
+
+        $razon = trim((string) ($solicitud->creador?->cliente?->razon_social ?? ''));
+        if ($razon !== '') {
+            return $razon;
+        }
+
+        $empresa = trim((string) ($solicitud->empresa_solicitante ?? ''));
+
+        return $empresa !== '' ? $empresa : '—';
     }
 
     /**

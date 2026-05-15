@@ -104,8 +104,7 @@ class SolicitudPolicy
     }
 
     /**
-     * Ícono «editar» en detalle completo cliente: visible mientras la solicitud no esté cerrada (paridad vista legado).
-     * El PUT sigue usando {@see update()} (solo estado Registrado).
+     * Ícono «editar» en listado y detalle cliente (paridad legado: activa, no Completada ni Cancelada).
      */
     public function openClienteEdit(Usuario $actor, Solicitud $solicitud): bool
     {
@@ -113,19 +112,19 @@ class SolicitudPolicy
     }
 
     /**
-     * Edición desde panel cliente solo con solicitud recién cargada al flujo SJ (no intervenida).
+     * Guardar edición cliente: paridad legado (activa, no Completada ni Cancelada).
      */
     public function update(Usuario $actor, Solicitud $solicitud): bool
     {
-        return $this->clientePuedeGestionPropiaSiRegistrado($actor, $solicitud);
+        return $this->clientePuedeMostrarBotonEditarDetalle($actor, $solicitud);
     }
 
     /**
-     * Anular solicitud (estado Cancelado / inactivo), mismo alcance que edición cliente.
+     * Anular solicitud (estado Cancelado / inactivo). Paridad legado: activa y no Completada.
      */
     public function cancel(Usuario $actor, Solicitud $solicitud): bool
     {
-        return $this->clientePuedeGestionPropiaSiRegistrado($actor, $solicitud);
+        return $this->clientePuedeCancelarSolicitud($actor, $solicitud);
     }
 
     /**
@@ -226,7 +225,11 @@ class SolicitudPolicy
             return false;
         }
 
-        $est = mb_strtolower(trim((string) $solicitud->estado));
+        if ((int) $solicitud->activo !== 1) {
+            return false;
+        }
+
+        $est = mb_strtolower(trim((string) ($solicitud->estado ?? '')));
         if ($est === '') {
             return false;
         }
@@ -254,5 +257,38 @@ class SolicitudPolicy
         }
 
         return trim((string) $solicitud->estado) === 'Registrado';
+    }
+
+    /**
+     * Cancelar mientras la solicitud siga activa y no esté cerrada (Completada/Cancelada).
+     */
+    private function clientePuedeCancelarSolicitud(Usuario $actor, Solicitud $solicitud): bool
+    {
+        $rol = UserRole::tryFrom((int) $actor->id_rol);
+        if ($rol === null) {
+            return false;
+        }
+        if ($actor->id_cliente === null) {
+            return false;
+        }
+        if (! in_array($rol, [UserRole::Cliente, UserRole::AdminCliente], true)) {
+            return false;
+        }
+        if (! (bool) $actor->permiso_crear_solicitudes) {
+            return false;
+        }
+        if (! $this->solicitudPerteneceAOrganizacionCliente($solicitud, $actor)) {
+            return false;
+        }
+        if ((int) $solicitud->activo !== 1) {
+            return false;
+        }
+
+        $est = mb_strtolower(trim((string) $solicitud->estado));
+        if ($est === '') {
+            return false;
+        }
+
+        return ! str_contains($est, 'complet') && ! str_contains($est, 'cancel');
     }
 }

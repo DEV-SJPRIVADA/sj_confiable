@@ -12,7 +12,7 @@
     $estadoUrl = route('panel.cliente.solicitudes.estado', $s);
     $docUrl = $estadoUrl.'#documentos';
     $canView = $usuario && $usuario->can('view', $s);
-    $canUpdate = $usuario && ! $filaEsCancelada && $usuario->can('update', $s);
+    $canOpenEdit = $usuario && ! $filaEsCancelada && $usuario->can('openClienteEdit', $s);
     $canCancel = $usuario && ! $filaEsCancelada && $usuario->can('cancel', $s);
 @endphp
 <div class="sol-cli-acciones d-inline-flex align-items-center justify-content-center flex-nowrap gap-1 @if ($filaEsCancelada) sol-cli-acciones--inactivos @endif"
@@ -55,25 +55,29 @@
         </a>
     @endif
 
-    {{-- 4 Editar --}}
-    @if ($canUpdate)
+    {{-- 4 Editar (legado: activa y estado distinto de Completado) --}}
+    @if ($canOpenEdit)
         <a href="{{ route('panel.cliente.solicitudes.edit', $s) }}" class="sol-cli-acc sol-cli-acc--neutro text-decoration-none" title="Editar solicitud">
-            <i class="fas fa-pen-to-square" aria-hidden="true"></i><span class="visually-hidden">Editar</span>
+            <i class="fas fa-edit" aria-hidden="true"></i><span class="visually-hidden">Editar</span>
         </a>
     @else
-        <span class="sol-cli-acc sol-cli-acc--neutro" title="No disponible"><i class="fas fa-pen-to-square" aria-hidden="true"></i></span>
+        <span class="sol-cli-acc sol-cli-acc--neutro" title="No disponible"><i class="fas fa-edit" aria-hidden="true"></i></span>
     @endif
 
     {{-- 5 Anular --}}
     @if ($canCancel)
         <form method="post" action="{{ route('panel.cliente.solicitudes.cancel', $s) }}" class="d-inline-block m-0 sol-cli-cancel-form"
-              onsubmit="return confirm('¿Anular la solicitud #{{ $s->id }}? Esta acción no se puede deshacer.');">
+              id="sol-cli-cancel-form-{{ $s->id }}">
             @csrf
-            <button type="submit" class="sol-cli-acc sol-cli-acc--neutro border-0 p-0 bg-transparent sol-cli-cancel-btn" title="Anular solicitud">
+            <button type="button" class="sol-cli-acc sol-cli-acc--neutro border-0 p-0 bg-transparent sol-cli-cancel-btn"
+                    title="Anular solicitud"
+                    data-anular-solicitud-trigger
+                    data-anular-form-id="sol-cli-cancel-form-{{ $s->id }}"
+                    data-solicitud-id="{{ $s->id }}">
                 <i class="fas fa-times-circle" aria-hidden="true"></i><span class="visually-hidden">Anular</span>
             </button>
         </form>
     @else
-        <span class="sol-cli-acc sol-cli-acc--neutro" title="No disponible"><i class="fas fa-times-circle" aria-hidden="true"></i></span>
+        <span class="sol-cli-acc sol-cli-acc--neutro sol-cli-acc--disabled" title="No disponible" aria-disabled="true"><i class="fas fa-times-circle" aria-hidden="true"></i></span>
     @endif
 </div>

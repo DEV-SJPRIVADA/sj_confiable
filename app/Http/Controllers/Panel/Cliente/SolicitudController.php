@@ -108,17 +108,9 @@ class SolicitudController extends Controller
         ]);
     }
 
-    public function edit(Solicitud $solicitud): View|RedirectResponse
+    public function edit(Solicitud $solicitud): View
     {
         $this->authorize('openClienteEdit', $solicitud);
-
-        /** @var Usuario $usuario */
-        $usuario = auth()->user();
-        if (! $usuario->can('update', $solicitud)) {
-            return redirect()
-                ->route('panel.cliente.solicitudes.show', $solicitud)
-                ->with('error', 'Solo puede editar solicitudes en estado Registrado (antes del trámite SJ).');
-        }
 
         $solicitud->load(['serviciosPivote']);
 
@@ -149,10 +141,10 @@ class SolicitudController extends Controller
     {
         $this->authorize('cancel', $solicitud);
 
-        $cancelar->cancelar($solicitud);
+        $cancelar->cancelar($solicitud, $request->user());
 
         return redirect()
             ->route('panel.cliente.solicitudes.index')
-            ->with('status', 'Solicitud anulada correctamente.');
+            ->with('status', 'Solicitud cancelada correctamente. El equipo SJ fue notificado.');
     }
 }
