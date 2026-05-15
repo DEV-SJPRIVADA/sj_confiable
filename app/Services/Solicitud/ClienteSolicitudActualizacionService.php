@@ -36,8 +36,7 @@ final class ClienteSolicitudActualizacionService
      *   telefono_fijo?: string|null,
      *   fecha_expedicion?: string|null,
      *   lugar_expedicion?: string|null,
-     *   paquete_id?: int|null,
-     *   servicio_ids?: list<int>
+     *   servicio_ids: list<int>
      * }  $data
      */
     public function actualizar(Usuario $actor, Solicitud $solicitud, array $data): Solicitud
@@ -46,8 +45,10 @@ final class ClienteSolicitudActualizacionService
         $estadoPrevio = trim((string) ($solicitud->estado ?? ''));
 
         $solicitud = DB::transaction(function () use ($cliente, $solicitud, $data, $actor, $estadoPrevio): Solicitud {
-            $paqueteId = ! empty($data['paquete_id']) ? (int) $data['paquete_id'] : null;
             $servicioIds = array_values(array_unique(array_map('intval', $data['servicio_ids'] ?? [])));
+            if ($servicioIds === [] || count($servicioIds) > 5) {
+                throw new \InvalidArgumentException('Debe seleccionar entre 1 y 5 servicios.');
+            }
 
             $solicitud->empresa_solicitante = (string) $cliente->razon_social;
             $solicitud->nit_empresa_solicitante = (string) $cliente->NIT;
@@ -70,29 +71,17 @@ final class ClienteSolicitudActualizacionService
             $solicitud->comentarios = isset($data['comentarios']) && trim((string) $data['comentarios']) !== ''
                 ? (string) $data['comentarios'] : null;
 
-            if ($paqueteId !== null) {
-                $solicitud->paquete_id = $paqueteId;
-                $solicitud->servicio_id = null;
-            } else {
-                $solicitud->paquete_id = null;
-                $solicitud->servicio_id = $servicioIds[0] ?? null;
-            }
-
-            if ($solicitud->servicio_id === null && $solicitud->paquete_id === null) {
-                throw new \InvalidArgumentException('Solicitud sin servicio o paquete.');
-            }
+            // Paridad legado: actualizarSolicitud solo toca servicio_id; paquete_id no se modifica en edición.
+            $solicitud->servicio_id = $servicioIds[0];
 
             $solicitud->save();
 
             DB::table('solicitud_servicios')->where('solicitud_id', (int) $solicitud->id)->delete();
-
-            if ($paqueteId === null && $servicioIds !== []) {
-                foreach ($servicioIds as $sid) {
-                    DB::table('solicitud_servicios')->insert([
-                        'solicitud_id' => (int) $solicitud->id,
-                        'servicio_id' => $sid,
-                    ]);
-                }
+            foreach ($servicioIds as $sid) {
+                DB::table('solicitud_servicios')->insert([
+                    'solicitud_id' => (int) $solicitud->id,
+                    'servicio_id' => $sid,
+                ]);
             }
 
             $estadoActual = trim((string) ($solicitud->estado ?? ''));

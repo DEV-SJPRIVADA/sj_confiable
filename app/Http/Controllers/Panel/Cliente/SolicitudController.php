@@ -117,7 +117,6 @@ class SolicitudController extends Controller
         return view('panel.cliente.solicitudes.edit', [
             'solicitud' => $solicitud,
             'servicios' => CatServicio::query()->orderBy('nombre')->get(),
-            'paquetes' => PaqueteServicio::query()->orderBy('nombre')->get(),
             'ciudades' => CiudadesColombia::opciones(),
             'servicioIdsSeleccionados' => $solicitud->serviciosPivote->pluck('id_servicio')->map(fn ($id) => (int) $id)->all(),
         ]);

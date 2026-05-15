@@ -73,12 +73,15 @@ class StoreClienteSolicitudRequest extends FormRequest
                 static fn (mixed $x): bool => $x !== null && $x !== '',
             ));
             if ($paquete && count($ids) > 0) {
-                $v->errors()->add('paquete_id', 'No puede combinar servicios individuales y un paquete en la misma solicitud.');
+                $v->errors()->add('paquete_id', 'Debe seleccionar entre 1 y 5 servicios O un paquete, pero no ambos.');
 
                 return;
             }
             if (! $paquete && count($ids) < 1) {
-                $v->errors()->add('servicio_ids', 'Seleccione al menos un servicio o un paquete.');
+                $v->errors()->add('servicio_ids', 'Debe seleccionar entre 1 y 5 servicios O un paquete, pero no ambos.');
+            }
+            if (! $paquete && count($ids) > 5) {
+                $v->errors()->add('servicio_ids', 'Máximo 5 servicios.');
             }
         });
     }

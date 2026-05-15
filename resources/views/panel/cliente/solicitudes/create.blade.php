@@ -1,5 +1,12 @@
 @extends('layouts.app')
 
+@php
+    $picklistAsset = max(
+        is_file(public_path('css/legacy/picklist-checkbox.css')) ? filemtime(public_path('css/legacy/picklist-checkbox.css')) : 0,
+        is_file(public_path('js/solicitudes/picklist-checkbox.js')) ? filemtime(public_path('js/solicitudes/picklist-checkbox.js')) : 0,
+    );
+@endphp
+
 @section('title', 'Agregar solicitud — Cliente')
 
 @push('styles')
@@ -26,8 +33,8 @@
         border-radius: 0.35rem;
         box-shadow: 0 0.12rem 0.4rem rgba(0, 0, 0, 0.06);
     }
-    .panel-solicitud-create .multi-servicios { min-height: 12.5rem; }
 </style>
+<link rel="stylesheet" href="{{ asset('css/legacy/picklist-checkbox.css') }}?v={{ $picklistAsset }}">
 @endpush
 
 @section('content')
@@ -59,27 +66,46 @@
             </div>
         </div>
 
+        @php
+            $picklistServiciosItems = $servicios->map(static fn ($s) => [
+                'value' => $s->id_servicio,
+                'label' => $s->nombre,
+            ])->all();
+            $picklistPaquetesItems = $paquetes->map(static fn ($p) => [
+                'value' => $p->id,
+                'label' => \Illuminate\Support\Str::limit($p->nombre, 90),
+            ])->all();
+            $oldPaquete = old('paquete_id');
+        @endphp
         <div class="card border-0 shadow-sm mb-3 p-3 p-md-4 card-section">
             {{-- Misma lógica que el legado: una fila con cuatro columnas (servicios | paquete | ciudad prestación | ciudad solicitud) --}}
             <div class="row g-3 align-items-stretch">
                 <div class="col-12 col-md-6 col-lg-3 d-flex flex-column">
-                    <label class="form-label" for="servicio_ids">Servicios (1 a 5) <i class="fas fa-info-circle text-info" title="Elija servicios o un paquete, no ambos" aria-hidden="true"></i></label>
-                    <select name="servicio_ids[]" id="servicio_ids" class="form-select multi-servicios flex-grow-1" multiple size="8" data-role="servicios-multiple">
-                        @foreach ($servicios as $svc)
-                            <option value="{{ $svc->id_servicio }}" @selected(in_array($svc->id_servicio, old('servicio_ids', []), true))>{{ $svc->nombre }}</option>
-                        @endforeach
-                    </select>
-                    <p class="form-hint mt-2 mb-0" id="helpServicios">Mantenga presionada la tecla Ctrl (Cmd en Mac) para elegir varios. Máximo 5.</p>
+                    <label class="form-label" for="picklist-servicios-create-trigger">Servicios (1 a 5) <i class="fas fa-info-circle text-info" title="Elija servicios o un paquete, no ambos" aria-hidden="true"></i></label>
+                    @include('panel.partials._picklist-checkbox', [
+                        'id' => 'picklist-servicios-create',
+                        'name' => 'servicio_ids',
+                        'multiple' => true,
+                        'max' => 5,
+                        'placeholder' => 'Seleccione servicio',
+                        'selected' => old('servicio_ids', []),
+                        'items' => $picklistServiciosItems,
+                        'role' => 'servicios-multiple',
+                    ])
+                    <p class="form-hint mt-2 mb-0">Haga clic para elegir. Máximo 5 servicios.</p>
                 </div>
                 <div class="col-12 col-md-6 col-lg-3 d-flex flex-column">
-                    <label class="form-label" for="paquete_id">Paquetes de servicio</label>
-                    <select name="paquete_id" id="paquete_id" class="form-select" data-role="paquete">
-                        <option value="">Seleccione una opción</option>
-                        @foreach ($paquetes as $p)
-                            <option value="{{ $p->id }}" @selected((string) old('paquete_id') === (string) $p->id)>{{ \Illuminate\Support\Str::limit($p->nombre, 90) }}</option>
-                        @endforeach
-                    </select>
-                    <p class="form-hint mt-2 mb-0">Solo puede seleccionar servicios individuales o un paquete de servicios, no ambos en la misma solicitud.</p>
+                    <label class="form-label" for="picklist-paquete-create-trigger">Paquetes de servicio</label>
+                    @include('panel.partials._picklist-checkbox', [
+                        'id' => 'picklist-paquete-create',
+                        'name' => 'paquete_id',
+                        'multiple' => false,
+                        'placeholder' => 'Seleccione paquete',
+                        'selected' => $oldPaquete ? [$oldPaquete] : [],
+                        'items' => $picklistPaquetesItems,
+                        'role' => 'paquete',
+                    ])
+                    <p class="form-hint mt-2 mb-0">Servicios individuales o un paquete, no ambos en la misma solicitud.</p>
                 </div>
                 <div class="col-12 col-md-6 col-lg-3 d-flex flex-column">
                     <label class="form-label" for="ciudad_prestacion_servicio">Ciudad donde se prestará el servicio <span class="req">*</span></label>
@@ -180,7 +206,7 @@
         </div>
 
         <div class="d-flex flex-column align-items-center gap-2 mb-4">
-            <p class="text-danger small mb-0 text-center px-1 fw-medium" id="msgServicioPaquete" role="status">Seleccione al menos un servicio o un paquete.</p>
+            <p class="text-danger small mb-0 text-center px-1 fw-medium {{ ($errors->has('servicio_ids') || $errors->has('paquete_id')) ? '' : 'd-none' }}" id="msgServicioPaquete" role="status">{{ $errors->first('servicio_ids') ?: $errors->first('paquete_id') ?: 'Debe seleccionar entre 1 y 5 servicios O un paquete, pero no ambos.' }}</p>
             <button type="submit" class="btn btn-primary text-uppercase px-5 py-2">Enviar solicitud</button>
         </div>
     </form>
@@ -188,37 +214,5 @@
 @endsection
 
 @push('scripts')
-<script>
-(function () {
-    var form = document.getElementById('formNuevaSolicitudCliente');
-    var multi = document.querySelector('[data-role="servicios-multiple"]');
-    var paq = document.querySelector('[data-role="paquete"]');
-    if (!form || !multi || !paq) return;
-    function countSel() {
-        var n = 0;
-        Array.prototype.forEach.call(multi.options, function (o) { if (o.selected) n++; });
-        return n;
-    }
-    function syncMutual() {
-        if (paq.value) {
-            Array.prototype.forEach.call(multi.options, function (o) { o.selected = false; });
-            multi.setAttribute('disabled', 'disabled');
-        } else {
-            multi.removeAttribute('disabled');
-        }
-        if (countSel() > 0) {
-            paq.value = '';
-            paq.setAttribute('disabled', 'disabled');
-        } else {
-            if (!paq.value) { paq.removeAttribute('disabled'); }
-        }
-    }
-    multi.addEventListener('change', syncMutual);
-    paq.addEventListener('change', syncMutual);
-    form.addEventListener('submit', function (e) {
-        if (countSel() > 5) { e.preventDefault(); }
-    });
-    syncMutual();
-})();
-</script>
+<script src="{{ asset('js/solicitudes/picklist-checkbox.js') }}?v={{ $picklistAsset }}"></script>
 @endpush

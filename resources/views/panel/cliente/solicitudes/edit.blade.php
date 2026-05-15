@@ -1,6 +1,10 @@
 @extends('layouts.app')
 
 @php
+    $picklistAsset = max(
+        is_file(public_path('css/legacy/picklist-checkbox.css')) ? filemtime(public_path('css/legacy/picklist-checkbox.css')) : 0,
+        is_file(public_path('js/solicitudes/picklist-checkbox.js')) ? filemtime(public_path('js/solicitudes/picklist-checkbox.js')) : 0,
+    );
     $selServicios = old('servicio_ids', $servicioIdsSeleccionados ?? []);
     $tipoOpts = [
         'CC' => 'Cédula de Ciudadanía',
@@ -35,13 +39,19 @@
         color: #212529;
     }
     .cli-edit-form-card .form-label .req { color: #c0392b; }
-    .cli-edit-form-card .multi-servicios { min-height: 12rem; }
     .cli-edit-title {
         font-size: clamp(1.25rem, 2.5vw, 1.5rem);
         font-weight: 700;
         letter-spacing: 0.015em;
     }
 </style>
+@php
+    $picklistServiciosItems = $servicios->map(static fn ($s) => [
+        'value' => $s->id_servicio,
+        'label' => $s->nombre,
+    ])->all();
+@endphp
+<link rel="stylesheet" href="{{ asset('css/legacy/picklist-checkbox.css') }}?v={{ $picklistAsset }}">
 @endpush
 
 @section('content')
@@ -89,32 +99,28 @@
 
             <div class="row g-3 mb-3 align-items-stretch">
                 <div class="col-12 col-md-6 d-flex flex-column">
-                    <label class="form-label" for="servicio_ids">Servicios (1 a 5)</label>
-                    <select name="servicio_ids[]" id="servicio_ids" class="form-select multi-servicios flex-grow-1" multiple size="8" data-role="servicios-multiple">
-                        @foreach ($servicios as $svc)
-                            <option value="{{ $svc->id_servicio }}" @selected(in_array((int) $svc->id_servicio, array_map('intval', $selServicios), true))>{{ $svc->nombre }}</option>
-                        @endforeach
-                    </select>
+                    <label class="form-label" for="picklist-servicios-edit-trigger">Servicios (1 a 5) <span class="req">*</span></label>
+                    @include('panel.partials._picklist-checkbox', [
+                        'id' => 'picklist-servicios-edit',
+                        'name' => 'servicio_ids',
+                        'multiple' => true,
+                        'max' => 5,
+                        'placeholder' => 'Seleccione servicio',
+                        'selected' => $selServicios,
+                        'items' => $picklistServiciosItems,
+                        'role' => 'servicios-multiple',
+                    ])
+                    <small class="text-muted mt-1">Haga clic para elegir. Máx. 5.</small>
+                    <small id="serviciosEditError" class="text-danger d-none mt-1" role="status">Seleccione entre 1 y 5 servicios.</small>
                 </div>
                 <div class="col-12 col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label" for="paquete_id">Paquetes de servicio</label>
-                        <select name="paquete_id" id="paquete_id" class="form-select" data-role="paquete">
-                            <option value="">Seleccione una opción</option>
-                            @foreach ($paquetes as $p)
-                                <option value="{{ $p->id }}" @selected((string) old('paquete_id', $solicitud->paquete_id ?? '') === (string) $p->id)>{{ \Illuminate\Support\Str::limit($p->nombre, 100) }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label" for="ciudad_prestacion_servicio">Ciudad Prestación del Servicio <span class="req">*</span></label>
-                        <select name="ciudad_prestacion_servicio" id="ciudad_prestacion_servicio" class="form-select" required>
-                            <option value="">Seleccione</option>
-                            @foreach ($ciudades as $c)
-                                <option value="{{ $c }}" @selected(old('ciudad_prestacion_servicio', $solicitud->ciudad_prestacion_servicio) === $c)>{{ $c }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                    <label class="form-label" for="ciudad_prestacion_servicio">Ciudad Prestación del Servicio <span class="req">*</span></label>
+                    <select name="ciudad_prestacion_servicio" id="ciudad_prestacion_servicio" class="form-select" required>
+                        <option value="">Seleccione</option>
+                        @foreach ($ciudades as $c)
+                            <option value="{{ $c }}" @selected(old('ciudad_prestacion_servicio', $solicitud->ciudad_prestacion_servicio) === $c)>{{ $c }}</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
 
@@ -208,9 +214,9 @@
                 <textarea name="comentarios" id="comentarios" class="form-control" rows="4" maxlength="2000" placeholder="">{{ old('comentarios', $solicitud->comentarios) }}</textarea>
             </div>
 
-            @if ($errors->has('servicio_ids') || $errors->has('paquete_id'))
-                <p class="text-danger small text-center fw-medium mb-3" id="msgServicioPaquete" role="status">
-                    {{ $errors->first('servicio_ids') ?: $errors->first('paquete_id') }}
+            @if ($errors->has('servicio_ids'))
+                <p class="text-danger small text-center fw-medium mb-3" id="msgServiciosEdit" role="status">
+                    {{ $errors->first('servicio_ids') }}
                 </p>
             @endif
 
@@ -224,41 +230,5 @@
 @endsection
 
 @push('scripts')
-<script>
-(function () {
-    var form = document.getElementById('formEditSolicitudCliente');
-    var multi = document.querySelector('#formEditSolicitudCliente [data-role="servicios-multiple"]');
-    var paq = document.querySelector('#formEditSolicitudCliente [data-role="paquete"]');
-    if (!form || !multi || !paq) return;
-    function countSel() {
-        var n = 0;
-        Array.prototype.forEach.call(multi.options, function (o) { if (o.selected) n++; });
-        return n;
-    }
-    function syncMutual() {
-        if (paq.value) {
-            Array.prototype.forEach.call(multi.options, function (o) { o.selected = false; });
-            multi.setAttribute('disabled', 'disabled');
-        } else {
-            multi.removeAttribute('disabled');
-        }
-        if (countSel() > 0) {
-            paq.value = '';
-            paq.setAttribute('disabled', 'disabled');
-        } else {
-            if (!paq.value) { paq.removeAttribute('disabled'); }
-        }
-    }
-    multi.addEventListener('change', syncMutual);
-    paq.addEventListener('change', syncMutual);
-    form.addEventListener('submit', function (e) {
-        if (countSel() > 5) {
-            e.preventDefault();
-            return false;
-        }
-        return undefined;
-    });
-    syncMutual();
-})();
-</script>
+<script src="{{ asset('js/solicitudes/picklist-checkbox.js') }}?v={{ $picklistAsset }}"></script>
 @endpush
