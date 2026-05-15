@@ -101,6 +101,10 @@ final class ClienteSolicitudActualizacionService
             if ($login !== '') {
                 $textoHistorial .= ' Usuario: '.$login.'.';
             }
+            $comCliente = trim((string) ($solicitud->comentarios ?? ''));
+            if ($comCliente !== '') {
+                $textoHistorial .= "\n\nComentario:\n".$comCliente;
+            }
 
             RespuestaSolicitud::query()->create(
                 RespuestaSolicitudHistorial::atributos([

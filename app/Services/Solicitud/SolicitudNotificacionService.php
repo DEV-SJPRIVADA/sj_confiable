@@ -78,6 +78,10 @@ final class SolicitudNotificacionService
             $tipo,
             $login !== '' ? $login : '—',
         );
+        $comCliente = trim((string) ($solicitud->comentarios ?? ''));
+        if ($comCliente !== '') {
+            $mensajeConsultor .= "\n\nComentario:\n".$comCliente;
+        }
 
         $this->broadcastConsultoresSj($tipo, $razonCliente, $idSol, $mensajeConsultor);
 

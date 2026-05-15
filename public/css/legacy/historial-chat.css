@@ -142,13 +142,34 @@
     margin: 0 0.25rem;
 }
 
-.sj-hist-bubble__texto {
+.sj-hist-bubble__texto-wrap {
+    margin: 0;
+}
+
+.sj-hist-bubble__texto,
+.sj-hist-bubble__comentario-texto {
     font-size: 0.875rem;
     color: #212529;
-    line-height: 1.55;
+    line-height: 1.45;
     margin: 0;
     word-break: break-word;
-    white-space: pre-wrap;
+}
+
+.sj-hist-bubble__comentario {
+    margin-top: 0.45rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.sj-hist-bubble__comentario-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #6c757d;
+    margin-bottom: 0.15rem;
+    line-height: 1.2;
 }
 
 .sj-hist-bubble__asoc {

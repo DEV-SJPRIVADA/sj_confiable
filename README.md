@@ -141,7 +141,7 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 |--------|--------|-----------------------------------------------|
 | Cliente **crea** solicitud | `notificaciones` roles 2 y 3 | Consultores SJ (correos en `t_persona`, roles 2/3) |
 | Cliente crea solicitud | **No** avisa al cliente creador | **No** |
-| Cliente **edita** solicitud | `notificaciones` roles 2 y 3 + fila en historial (`cliente_sj`) | Consultores SJ |
+| Cliente **edita** solicitud | `notificaciones` roles 2 y 3 + fila en historial (`cliente_sj`, incluye comentarios si los hay) | Consultores SJ (mensaje con comentario si aplica) |
 | Cliente **cancela** solicitud | `notificaciones` roles 2 y 3 + historial | Consultores SJ; si había asociado asignado, también `notificaciones_proveedor` |
 | Consultor responde **visible al cliente** | `notificaciones_cliente` (usuarios activos del `id_cliente`) | Mismos destinatarios |
 | Consultor responde solo trámite interno (`solo_sj`) | **No** cliente | **No** |
@@ -222,7 +222,8 @@ Los fallos SMTP se registran en `storage/logs/laravel.log` y **no** interrumpen 
 ### Historial de respuestas y canal (`respuesta_solicitudes.canal`)
 
 - Enum `HistorialRespuestaCanal`: `cliente_sj` (frente al cliente y consultores SJ), `sj_proveedor` (operación con asociado; el repositorio no expone estas filas en la vista cliente) y `solo_sj` (trámite interno SJ, sin presencia en el historial del panel cliente).
-- **UI tipo chat** (consultor, cliente estado, proveedor offcanvas): partial `resources/views/panel/solicitudes/_fragment-historial-chat.blade.php`, estilos `public/css/legacy/historial-chat.css`. Cada registro muestra usuario y fecha/hora, cambio de estado (si hubo) y texto completo de `respuesta`; colores por canal; orden cronológico ascendente.
+- **UI tipo chat** (consultor, cliente estado, proveedor offcanvas): partial `resources/views/panel/solicitudes/_fragment-historial-chat.blade.php`, estilos `public/css/legacy/historial-chat.css`. Cada registro muestra usuario y fecha/hora, cambio de estado (si hubo) y texto de `respuesta`; colores por canal; orden cronológico ascendente. Si el texto incluye bloque `Comentario:` (creación/edición cliente, asignación consultor), la vista lo separa en un subbloque compacto (sin duplicar saltos de línea).
+- **Comentarios en historial:** al crear o editar solicitud, el campo `comentarios` del formulario se anexa al texto del historial (`\n\nComentario:\n…`) y, en edición, también al correo/aviso a consultores SJ (`solicitudEditadaPorCliente`).
 - Wrapper de tarjeta: `_fragment-historial-respuestas.blade.php` (incluye el chat en detalle consultor y offcanvas).
 - Inserciones compatibles con BD sin columna `canal`: `App\Support\RespuestaSolicitudHistorial`. El repositorio omite filtros por `canal` / `visible_para_cliente` si esas columnas aún no existen (útil tras despliegue sin migrar).
 - Migraciones de backfill opcionales para filas sin canal, comentarios de creación en historial y reclasificación de historial consultor.

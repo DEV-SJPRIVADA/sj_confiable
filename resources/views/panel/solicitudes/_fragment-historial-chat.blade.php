@@ -58,6 +58,21 @@
             default => null,
         };
     };
+
+    /** Separa cuerpo del mensaje y bloque «Comentario:» (registros ya guardados en BD). */
+    $partirRespuestaHistorial = static function (string $raw): array {
+        if (preg_match('/\n\s*Comentario:\s*\n/u', $raw, $m, PREG_OFFSET_CAPTURE)) {
+            $pos = $m[0][1];
+            $len = strlen($m[0][0]);
+
+            return [
+                'cuerpo' => trim(substr($raw, 0, $pos)),
+                'comentario' => trim(substr($raw, $pos + $len)),
+            ];
+        }
+
+        return ['cuerpo' => trim($raw), 'comentario' => null];
+    };
 @endphp
 
 @once
@@ -121,7 +136,20 @@
                         </div>
                     @endif
 
-                    <p class="sj-hist-bubble__texto">{!! nl2br(e((string) ($h->respuesta ?? ''))) !!}</p>
+                    @php
+                        $partesTexto = $partirRespuestaHistorial((string) ($h->respuesta ?? ''));
+                    @endphp
+                    <div class="sj-hist-bubble__texto-wrap">
+                        @if ($partesTexto['cuerpo'] !== '')
+                            <p class="sj-hist-bubble__texto">{!! nl2br(e($partesTexto['cuerpo']), false) !!}</p>
+                        @endif
+                        @if (($partesTexto['comentario'] ?? '') !== '')
+                            <div class="sj-hist-bubble__comentario">
+                                <span class="sj-hist-bubble__comentario-label">Comentario</span>
+                                <p class="sj-hist-bubble__comentario-texto">{!! nl2br(e($partesTexto['comentario']), false) !!}</p>
+                            </div>
+                        @endif
+                    </div>
 
                     @if ($modo === 'consultor' && $asoc !== '')
                         <div class="sj-hist-bubble__asoc">
