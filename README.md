@@ -46,6 +46,9 @@ php artisan db:seed
 | `SEED_DEV_PASSWORDS` | Activa el seeder de contraseñas de prueba para ids de usuario definidos en el seeder |
 | `SEED_ADMIN_PASSWORD` | Contraseña en texto plano (solo dev) usada para generar el hash con `Hash::make` en usuarios de prueba |
 | `SEED_LEGACY_OPERATIONAL` | `true`/`false`: datos operativos demo (solicitudes, respuestas, notificaciones) vía `LegacyOperationalDataSeeder` (por defecto `true` en `.env.example`) |
+| `LEGACY_DOCUMENTS_ROOT` | Ruta absoluta a la carpeta de PDFs del sistema anterior (importación / descargas) |
+| `MAIL_*` | SMTP para avisos por correo (ver [Correo y notificaciones](#correo-y-notificaciones)) |
+| `MAIL_NOTIFICATIONS_ENABLED` | `true`/`false`: envía correos en los mismos hitos que la campana del panel (por defecto `true`) |
 
 #### Migraciones y semillas (sin import SQL obligatorio)
 
@@ -107,7 +110,7 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 
 #### Solicitudes de confiabilidad (consultor) — gestión, modal y vista de respuesta
 
-- **Listado** `GET /panel/consultor/solicitudes`: pantalla *Gestión de Solicitudes* alineada al legado: conmutador Activas/Inactivas (`solicitudes.activo`), búsqueda, ordenación, paginación, filas resaltadas por estado, acciones con icono PDF (`public/images/pdf.png`) y contador de documentos (sin documentos el control no navega). La **lupa** abre un **modal** (*Detalle de Solicitud*) sin salir del listado; la **lista** enlaza a la vista de gestión con ancla `#historial` (abre el panel de historial).
+- **Listado** `GET /panel/consultor/solicitudes`: pantalla *Gestión de Solicitudes* alineada al legado: conmutador Activas/Inactivas (`solicitudes.activo`; inactivas en gris `table-secondary`), búsqueda, ordenación, paginación, **cuatro colores de fila por estado** (paridad `sj_confiable1`: Nuevo/Registrado gris azulado, En proceso amarillo, Completado verde, Cancelado salmón; clases `fila-nuevo`, `fila-en-proceso`, `fila-completado`, `fila-cancelado` vía `LegacySolicitudFilaEstado`), acciones con icono PDF (`public/images/pdf.png`) y contador de documentos (sin documentos el control no navega). La **lupa** abre un **modal** (*Detalle de Solicitud*) sin salir del listado; la **lista** enlaza a la vista de gestión con ancla `#historial` (abre el panel de historial).
 - **Datos:** `SolicitudRepository::paginateForConsultor()` y `baseListQuery()` cargan relaciones necesarias (incl. `paquete`, `proveedorAsignado`, `documentos` donde aplica).
 - **Vista por solicitud** `GET /panel/consultor/solicitudes/{solicitud}`: cabecera con **Volver**, **Detalle** e **Historial**; **offcanvas** detalle/documentos (`#documentos`) e historial (`#historial`); cuerpo central con ***Nueva respuesta*** — formulario activo (`POST /panel/consultor/solicitudes/{solicitud}/respuesta`, multipart): texto obligatorio, hasta 10 PDF, nuevo estado; historial con canal `cliente_sj` si el mensaje es **visible al cliente**, o `solo_sj` si el consultor marca solo trámite interno (sin aviso ni línea en el historial del panel cliente). Notificación a la organización cliente vía `SolicitudNotificacionService` solo en envíos visibles al cliente. Bloque ***Asignación de asociado de negocio*** (`POST …/asignar`) notifica al asociado; **no** dispara aviso al cliente. Fragmentos compartidos: `_fragment-documentos-*`, `_fragment-historial-respuestas` (audiencia por `canal` en `respuesta_solicitudes`).
 - **Adjuntos y visibilidad en panel cliente:** en *Nueva respuesta*, los checks *Adjuntos ya en expediente — incluir en el aviso al cliente* envían referencias `doc-{id}` / `dresp-{id}` (`ResponderSolicitudConsultorRequest::refsAdjuntosNotificacion`). Al guardar un envío **visible al cliente**, `ConsultorSolicitudRespuestaService` sincroniza `documentos.visible_para_cliente` y `documentos_respuesta.visible_para_cliente`: solo permanecen visibles para el cliente los marcados, las subidas del cliente (`cargado_desde_panel_cliente`) y los PDF nuevos adjuntados en ese envío. Los PDF que sube el asociado quedan ocultos al cliente hasta que el consultor los incluya así. El listado/descarga cliente usa esos flags (`EloquentSolicitudRepository` con canal cliente, `SolicitudArchivoController`).
@@ -129,11 +132,47 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 
 #### Notificaciones (consultor / cliente / proveedor)
 
-- **Consultor (`notificaciones`, roles destino 2 y 3):** `POST /panel/consultor/notificaciones/marcar-leidas` — marca leídas por ID o todas las del rol. Listado modal: **solo no leídas**; mismo criterio que el contador de la campana.
-- **Cliente (`notificaciones_cliente`, usuarios 1/4/5):** campana en `navbar-cliente`; `POST /panel/cliente/notificaciones/marcar-leidas`; `NotificacionClienteService`; modal `modal-notificaciones-cliente.blade.php`; enlace “ver estado” a `solicitudes.estado`.
+- **Consultor (`notificaciones`, roles destino 2 y 3):** `POST /panel/consultor/notificaciones/marcar-leidas` — marca leídas por ID o todas las del rol. Listado modal: **solo no leídas**; mismo criterio que el contador de la campana. Bandeja **compartida por rol** (todos los consultores con rol 2 o 3 ven el mismo aviso).
+- **Cliente (`notificaciones_cliente`, usuarios 1/4/5):** campana en `navbar-cliente`; `POST /panel/cliente/notificaciones/marcar-leidas`; `NotificacionClienteService`; modal `modal-notificaciones-cliente.blade.php`; enlace “ver estado” a `solicitudes.estado`. Bandeja **por usuario** (`id_usuario_destino`).
 - **Proveedor (`notificaciones_proveedor`, rol 6):** campana en `navbar-proveedor`; `POST /panel/proveedor/notificaciones/marcar-leidas`; `NotificacionProveedorService`; modal `modal-notificaciones-proveedor.blade.php`.
-- **Disparadores de negocio** (`SolicitudNotificacionService`): alta de solicitud desde panel cliente → filas SJ (2/3) + `notificaciones_cliente` a **todos** los usuarios activos del mismo `id_cliente`; asignación consultor→asociado → clientes organización + proveedores; mensajes operativos consultor→cliente al registrar respuesta (`ConsultorSolicitudRespuestaService`).
+- **Disparadores de negocio** (`SolicitudNotificacionService` + `SolicitudCorreoNotificacionService`):
+
+| Evento | Panel | Correo (si `MAIL_NOTIFICATIONS_ENABLED=true`) |
+|--------|--------|-----------------------------------------------|
+| Cliente **crea** solicitud | `notificaciones` roles 2 y 3 | Consultores SJ (correos en `t_persona`, roles 2/3) |
+| Cliente crea solicitud | **No** avisa al cliente creador | **No** |
+| Consultor responde **visible al cliente** | `notificaciones_cliente` (usuarios activos del `id_cliente`) | Mismos destinatarios |
+| Consultor responde solo trámite interno (`solo_sj`) | **No** cliente | **No** |
+| Consultor **asigna** asociado | `notificaciones_proveedor` | `correo_proveedor` + usuarios del proveedor |
+| Asignación | **No** cliente | **No** |
+| Proveedor responde | `notificaciones` roles 2 y 3 | Consultores SJ |
+
 - Modelos: `Notificacion`, `NotificacionCliente`, `NotificacionProveedor`. `Notificacion` usa `scopeNoLeidas` coherente con `leido` null/0.
+- Plantilla de correo: `resources/views/mail/solicitud-aviso.blade.php` (`App\Mail\SolicitudAvisoMail`).
+
+#### Correo y notificaciones
+
+Configurar SMTP en `.env` (no versionar contraseñas). Ejemplo **Microsoft 365 / Outlook**:
+
+```env
+MAIL_MAILER=smtp
+MAIL_SCHEME=smtp
+MAIL_HOST=smtp.office365.com
+MAIL_PORT=587
+MAIL_USERNAME=tu_cuenta@sjsp.com.co
+MAIL_PASSWORD=contraseña_de_aplicacion
+MAIL_FROM_ADDRESS=tu_cuenta@sjsp.com.co
+MAIL_FROM_NAME="${APP_NAME}"
+MAIL_NOTIFICATIONS_ENABLED=true
+```
+
+**Importante:** en Laravel 12 use `MAIL_SCHEME=smtp` (STARTTLS en puerto 587) o `smtps` (puerto 465). No use `tls` como valor de `MAIL_SCHEME`.
+
+Tras cambiar `.env`: `php artisan config:clear`.
+
+Prueba rápida: desde `php artisan tinker`, ejecutar `Mail::raw('Prueba', fn ($m) => $m->to('tu_correo@sjsp.com.co')->subject('Test'));` o disparar una solicitud de prueba y revisar bandeja y log.
+
+Los fallos SMTP se registran en `storage/logs/laravel.log` y **no** interrumpen el guardado de la solicitud.
 
 #### Inicio (dashboard) consultor
 
@@ -189,7 +228,9 @@ Rutas bajo `panel/consultor` con `authorize` y políticas registradas en `AppSer
 - `app/Http/Requests/Catalog/`: validación de catálogos (consultor); en **usuarios**, **clientes** y **asociados**, los *Form requests* de alta/edición usan `failedValidation` para volver al listado y reabrir el modal correspondiente cuando hay errores.
 - `app/Models/`: modelos Eloquent mapeando tablas legado (`solicitudes`, `t_usuarios`, `t_clientes`, `t_proveedores`, `notificaciones`, etc.)
 - `app/Policies/`: `SolicitudPolicy`, `ClientePolicy`, `ProveedorPolicy`, `UsuarioPolicy`, `SolicitudUsuarioPolicy`, y `Policies/Concerns/AuthorizesSJStaff`
-- `app/Services/Solicitud/`: `SolicitudAsignacionService`, `ClienteSolicitudCreacionService`, `ConsultorSolicitudRespuestaService`, `ProveedorSolicitudRespuestaService`, `ClienteSolicitudDocumentoAdjuntoService`, `SolicitudNotificacionService`, documentos y rutas de almacenamiento (`SolicitudDocumentoPathResolver` si aplica)
+- `app/Services/Solicitud/`: `SolicitudAsignacionService`, `ClienteSolicitudCreacionService`, `ConsultorSolicitudRespuestaService`, `ProveedorSolicitudRespuestaService`, `ClienteSolicitudDocumentoAdjuntoService`, `SolicitudNotificacionService`, `SolicitudCorreoNotificacionService`, documentos y rutas de almacenamiento (`SolicitudDocumentoPathResolver` si aplica)
+- `app/Support/LegacySolicitudFilaEstado.php`: clases CSS de fila por estado (paridad legado)
+- `config/notifications.php`: `MAIL_NOTIFICATIONS_ENABLED`
 - `app/Repositories/Contracts/SolicitudRepository.php` y `EloquentSolicitudRepository.php`: listados y `paginateForConsultor` (búsqueda y orden)
 - `resources/views/panel/consultor/solicitudes/`: index (gestión), show (gestión/respuesta con offcanvas), modales y partials asociados
 - `resources/views/panel/consultor/informes/`: informe de solicitudes (listado y export CSV)

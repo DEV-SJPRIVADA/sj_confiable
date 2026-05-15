@@ -32,15 +32,7 @@
     }
     .solicitudes-gestion-toolbar__search .input-group { min-width: 12rem; }
     .solicitudes-gestion__vista .btn { min-width: 6.5rem; }
-    tr.solicitud-gestion-fila--proceso td {
-        background: #fff9c4 !important;
-        color: #212529;
-    }
-    tr.solicitud-gestion-fila--default td {
-        background: #2c3a57 !important;
-        color: #f8f9fa;
-    }
-    tr.solicitud-gestion-fila--default a:not(.solicitud-accion-btn) { color: #9ec5fe; }
+    @include('panel.partials._styles-legacy-fila-estado-solicitud')
     .solicitud-acciones {
         display: inline-flex;
         align-items: center;
@@ -98,7 +90,7 @@
         box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
         flex-shrink: 0;
     }
-    tr.solicitud-gestion-fila--proceso .solicitud-doc-badge {
+    tr.fila-en-proceso .solicitud-doc-badge {
         background: #e8ecf0;
         color: #1e293b;
     }
@@ -106,9 +98,9 @@
     .solicitud-accion-btn--ver:hover { background: #0f2844; color: #fff; }
     .solicitud-accion-btn--hist { background: #2d8a54; }
     .solicitud-accion-btn--hist:hover { background: #236e43; color: #fff; }
-    tr.solicitud-gestion-fila--proceso .solicitud-accion-btn--ver { color: #fff; }
-    tr.solicitud-gestion-fila--proceso .solicitud-accion-btn--doc { color: #fff; }
-    tr.solicitud-gestion-fila--proceso .solicitud-accion-btn--hist { color: #fff; }
+    tr.fila-en-proceso .solicitud-accion-btn--ver { color: #fff; }
+    tr.fila-en-proceso .solicitud-accion-btn--doc { color: #fff; }
+    tr.fila-en-proceso .solicitud-accion-btn--hist { color: #fff; }
     .solicitud-accion-btn--doc-sin-enlace {
         pointer-events: none;
         cursor: default;
@@ -195,9 +187,12 @@
         }
         return $s->creador?->usuario ?? '—';
     };
-    $filaProceso = function ($s): bool {
-        $e = (string) ($s->estado ?? '');
-        return strcasecmp($e, 'En proceso') === 0;
+    $claseFilaGestion = static function ($s) use ($vista): string {
+        if ($vista === 'inactivas') {
+            return 'table-secondary';
+        }
+
+        return \App\Support\LegacySolicitudFilaEstado::claseCss((string) ($s->estado ?? ''));
     };
 @endphp
 
@@ -268,9 +263,9 @@
         </thead>
         <tbody>
         @forelse ($solicitudes as $s)
-            <tr @class(['solicitud-gestion-fila--proceso' => $filaProceso($s), 'solicitud-gestion-fila--default' => ! $filaProceso($s)])>
+            <tr class="{{ $claseFilaGestion($s) }}">
                 <td class="text-nowrap">
-                    <a href="{{ route($detalleRoute, $s) }}" class="text-decoration-none fw-semibold @if($filaProceso($s)) text-body @else text-info @endif">{{ $s->id }}</a>
+                    <a href="{{ route($detalleRoute, $s) }}" class="text-decoration-none fw-semibold solicitud-gestion-id-link">{{ $s->id }}</a>
                 </td>
                 <td class="col-evaluado">{{ \Illuminate\Support\Str::upper(trim(($s->nombres ?? '').' '.($s->apellidos ?? ''))) ?: '—' }}</td>
                 <td class="text-nowrap">{{ $s->tipo_identificacion }}: {{ $s->numero_documento }}</td>

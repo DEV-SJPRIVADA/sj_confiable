@@ -57,20 +57,7 @@
         border-color: #dee2e6;
         vertical-align: middle;
     }
-    .panel-cliente-solicitudes-lista .tabla-solicitudes-cli-fila--proceso td {
-        background: #fff9c4 !important;
-        color: #212529 !important;
-    }
-    .panel-cliente-solicitudes-lista .tabla-solicitudes-cli-fila--proceso td a.text-decoration-none {
-        color: #0a58ca !important;
-    }
-    .panel-cliente-solicitudes-lista .tabla-solicitudes-cli-fila--cancelado td {
-        background: #fce4ec !important;
-        color: #b71c1c !important;
-    }
-    .panel-cliente-solicitudes-lista .tabla-solicitudes-cli-fila--cancelado td a.text-decoration-none {
-        color: #8b1010 !important;
-    }
+    @include('panel.partials._styles-legacy-fila-estado-solicitud')
 
     @include('panel.partials._styles-cliente-acciones-solicitud')
 

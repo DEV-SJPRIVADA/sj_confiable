@@ -42,14 +42,7 @@
         vertical-align: middle;
         font-size: 0.88rem;
     }
-    .tabla-solicitudes-prov-fila--completado td {
-        background: #ccefd6 !important;
-        color: #14532d !important;
-    }
-    .tabla-solicitudes-prov-fila--cancelado td {
-        background: #fde0e9 !important;
-        color: #8f1d39 !important;
-    }
+    @include('panel.partials._styles-legacy-fila-estado-solicitud')
     .prov-solic-round-btn {
         display: inline-flex;
         width: 2.05rem;

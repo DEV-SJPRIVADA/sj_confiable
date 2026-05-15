@@ -5,15 +5,11 @@
     $esListaProveedorLegacy = $listaEstilo === 'proveedor-legacy';
 
     $claseLegacyFilaProveedor = static function (?string $estadoRaw): string {
-        $est = mb_strtolower(trim((string) $estadoRaw));
-        if ($est !== '' && str_contains($est, 'cancel')) {
-            return 'tabla-solicitudes-prov-fila tabla-solicitudes-prov-fila--cancelado';
-        }
-        if (str_contains($est, 'complet')) {
-            return 'tabla-solicitudes-prov-fila tabla-solicitudes-prov-fila--completado';
-        }
+        $estadoClass = \App\Support\LegacySolicitudFilaEstado::claseCss($estadoRaw);
 
-        return 'tabla-solicitudes-prov-fila';
+        return $estadoClass !== ''
+            ? 'tabla-solicitudes-prov-fila '.$estadoClass
+            : 'tabla-solicitudes-prov-fila';
     };
 
     $ciudadListaProveedor = static function (\App\Models\Solicitud $s): string {
@@ -26,15 +22,11 @@
     };
 
     $claseLegacyFila = static function (?string $estadoRaw): string {
-        $est = mb_strtolower(trim((string) $estadoRaw));
-        if ($est !== '' && str_contains($est, 'cancel')) {
-            return 'tabla-solicitudes-cli-fila tabla-solicitudes-cli-fila--cancelado';
-        }
-        if (str_contains($est, 'proceso')) {
-            return 'tabla-solicitudes-cli-fila tabla-solicitudes-cli-fila--proceso';
-        }
+        $estadoClass = \App\Support\LegacySolicitudFilaEstado::claseCss($estadoRaw);
 
-        return 'tabla-solicitudes-cli-fila';
+        return $estadoClass !== ''
+            ? 'tabla-solicitudes-cli-fila '.$estadoClass
+            : 'tabla-solicitudes-cli-fila';
     };
 
     $iconOrdenCabecera = static function (): string {

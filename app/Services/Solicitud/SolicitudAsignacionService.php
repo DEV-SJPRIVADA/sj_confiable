@@ -13,12 +13,17 @@ use App\Models\Usuario;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Transaccional con el flujo de `procesos/reportesAdmin/asignarSolicitud.php` (Laravel: sin PHPMailer aquí; correos vía notificaciones en siguiente iteración).
+ * Transaccional con el flujo de `procesos/reportesAdmin/asignarSolicitud.php`.
+ * Avisos en panel y correo al proveedor; sin aviso al cliente (canal operativo SJ↔proveedor).
  *
  * La asignación al asociado no genera avisos en `notificaciones_cliente`: el cliente no participa del canal operativo SJ↔proveedor.
  */
 final class SolicitudAsignacionService
 {
+    public function __construct(
+        private readonly SolicitudCorreoNotificacionService $correos,
+    ) {}
+
     public function asignar(
         Solicitud $solicitud,
         int $idProveedor,
@@ -35,6 +40,15 @@ final class SolicitudAsignacionService
         $comercial = trim((string) ($proveedor->nombre_comercial ?? ''));
         $nombreProveedor = $comercial !== '' ? $comercial : (string) $proveedor->razon_social_proveedor;
 
+        $mensajeProv = "Se le ha asignado la solicitud #$idSolicitud de $tipoNombre.";
+        if ($clienteFinal !== null && $clienteFinal !== '') {
+            $mensajeProv .= ' Cliente: '.$clienteFinal.'.';
+        }
+        if ($tipoCliente !== null && $tipoCliente !== '') {
+            $mensajeProv .= ' TIPO: '.$tipoCliente.'.';
+        }
+        $mensajeProv .= ' Por favor ingrese a la plataforma para gestionarla.';
+
         DB::transaction(function () use (
             $solicitud,
             $idProveedor,
@@ -44,6 +58,7 @@ final class SolicitudAsignacionService
             $tipoNombre,
             $idUsuarioActor,
             $nombreProveedor,
+            $mensajeProv,
         ): void {
             $solicitud->estado = 'En proceso';
             $solicitud->id_proveedor = $idProveedor;
@@ -68,15 +83,6 @@ final class SolicitudAsignacionService
                 'canal' => HistorialRespuestaCanal::SjProveedor->value,
             ]);
 
-            $mensajeProv = "Se le ha asignado la solicitud #$idSolicitud de $tipoNombre.";
-            if ($clienteFinal !== null && $clienteFinal !== '') {
-                $mensajeProv .= ' Cliente: '.$clienteFinal.'.';
-            }
-            if ($tipoCliente !== null && $tipoCliente !== '') {
-                $mensajeProv .= ' TIPO: '.$tipoCliente.'.';
-            }
-            $mensajeProv .= ' Por favor ingrese a la plataforma para gestionarla.';
-
             $usuariosProveedor = Usuario::query()
                 ->where('id_proveedor', $idProveedor)
                 ->where('activo', 1)
@@ -95,5 +101,13 @@ final class SolicitudAsignacionService
                 ]);
             }
         });
+
+        $this->correos->asignacionParaProveedor(
+            $idProveedor,
+            $tipoNombre,
+            $nombreProveedor,
+            $idSolicitud,
+            $mensajeProv,
+        );
     }
 }
