@@ -118,22 +118,69 @@ Si el hosting no trae Composer global, usad `composer.phar` descargado o el inst
 php artisan migrate --force
 ```
 
-Opcional (solo si queréis datos demo en UAT):
+**BD con tablas ya creadas** (import o seed previo): `migrate --force` puede fallar en `create_legacy_sj_catalog_tables` (*Table already exists*). No borra datos. Aplicar al menos las extensiones:
 
 ```bash
-php artisan db:seed --force
+php artisan migrate --force --path=database/migrations/2026_04_24_220000_add_canal_audience_to_respuesta_solicitudes.php
+php artisan migrate --force --path=database/migrations/2026_04_25_130000_add_visible_para_cliente_to_documentos_tables.php
 ```
 
-Ajustá antes `SEED_ADMIN_PASSWORD`, `SEED_LEGACY_OPERATIONAL`, etc. en `.env`.
+Sin la columna `canal`, el panel proveedor devuelve **500** al enviar o abrir respuesta.
+
+**Usuario admin en UAT:** `db:seed` global solo corre con `APP_ENV=local`. Usar:
+
+```bash
+php artisan db:seed --class=Database\\Seeders\\LegacyCatalogSeeder --force
+php artisan db:seed --class=Database\\Seeders\\LegacyIdentitySeeder --force
+php artisan tinker --execute="Illuminate\Support\Facades\DB::table('t_usuarios')->where('usuario','Administrador')->update(['password'=>Illuminate\Support\Facades\Hash::make('SuClaveUAT'),'activo'=>1]);"
+```
+
+Opcional (datos demo): `LegacyOperationalDataSeeder` con `--class=... --force`.
+
+Ajustá antes `SEED_ADMIN_PASSWORD`, `SEED_LEGACY_OPERATIONAL`, etc. en `.env` **solo en local**; en hosting: `SEED_DEV_PASSWORDS=false`, `RUN_LEGACY_SQL_IMPORT=false`.
 
 ## 7. Permisos y enlace de almacenamiento
 
 ```bash
 chmod -R ug+rwx storage bootstrap/cache
-php artisan storage:link
 ```
 
-Si no hay SSH, creá el enlace simbólico desde el file manager del panel o subí equivalente según documentación del host.
+### Enlace `public/storage` → `storage/app/public`
+
+Los PDF subidos por proveedor/consultor se guardan en `storage/app/public/uploads/`. La URL pública es `/storage/uploads/...`.
+
+**Hostinger:** `php artisan storage:link` suele fallar con *Call to undefined function exec()* (PHP deshabilita `exec`). Enlace manual por SSH:
+
+```bash
+cd /home/usuario/domains/ejemplo.com/public_html/uat
+# Si public/storage es una carpeta copiada (no symlink), renombrarla:
+mv public/storage public/storage.bak
+ln -s ../storage/app/public public/storage
+ls -la public/storage
+```
+
+Debe mostrar: `storage -> ../storage/app/public`
+
+Si `public/storage` es una **carpeta duplicada** desactualizada, los PDF nuevos dan **403** o no cargan aunque existan en `storage/app/public/uploads/`.
+
+**Alternativa** si `ln -s` no está permitido:
+
+```bash
+mkdir -p public/storage
+cp -a storage/app/public/. public/storage/
+chmod -R 755 public/storage
+```
+
+(Repetir `cp` tras cada subida de PDF, o resolver el symlink.)
+
+### `.env` crítico para PDFs y correos
+
+```env
+APP_URL=https://uat.sjconfiable.com
+LEGACY_DOCUMENTS_ROOT=/home/usuario/.../uat/storage/app/public/uploads
+```
+
+No usar `APP_URL=http://172.16.x.x:8080` ni rutas Windows en hosting Linux.
 
 ## 8. HTTPS
 
@@ -161,8 +208,10 @@ Activá **SSL gratis** (Let’s Encrypt) en el panel para `uat.sjconfiable.com` 
 - [ ] Document root = `public` de Laravel **solo en la carpeta UAT** (o equivalente).
 - [ ] BD MySQL dedicada UAT y credenciales **solo** en el `.env` del UAT.
 - [ ] `APP_KEY` generado; `APP_URL` con https apuntando al subdominio UAT.
-- [ ] `composer install` + `php artisan migrate --force` ejecutados **en el proyecto UAT** contra la BD UAT.
-- [ ] Permisos `storage` / `bootstrap/cache` + `storage:link`.
+- [ ] `composer install` + migraciones ejecutadas **en el proyecto UAT** contra la BD UAT (incl. `canal` si la BD ya tenía tablas).
+- [ ] `public/storage` es **symlink** a `storage/app/public` (en Hostinger: `ln -s`, no `php artisan storage:link` si falla `exec`).
+- [ ] `APP_URL` = URL pública HTTPS del subdominio; `LEGACY_DOCUMENTS_ROOT` = ruta Linux en el servidor.
+- [ ] Usuario admin de prueba creado (seeders por `--class` + contraseña en tinker).
 - [ ] SSL activo para el subdominio.
 
 Si más adelante automatizáis despliegues, podéis añadir un script en CI/CD que ejecute estos pasos sobre el servidor UAT por SSH.

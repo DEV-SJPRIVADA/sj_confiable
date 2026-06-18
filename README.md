@@ -36,7 +36,7 @@ php artisan db:seed
 
 **Importante:** no subir el archivo `.env` al repositorio. Para un entorno nuevo, parta de `.env.example` y defina claves reales o de desarrollo de forma local.
 
-**UAT / servidor:** para levantar el subdominio de pruebas desde cero (DNS, BD, `public`, migraciones y checklist), ver [`docs/uat-deploy-from-scratch.md`](docs/uat-deploy-from-scratch.md).
+**UAT / servidor:** guía paso a paso en [`docs/uat-deploy-from-scratch.md`](docs/uat-deploy-from-scratch.md). Resumen de hosting (Hostinger y similares) en [Despliegue en hosting](#despliegue-en-hosting-uat--producción) más abajo.
 
 #### Variables de entorno útiles (desarrollo)
 
@@ -59,6 +59,92 @@ php artisan db:seed
   - `LegacyOperationalDataSeeder` (si `SEED_LEGACY_OPERATIONAL=true`): solicitudes, respuestas, documentos de respuesta, notificaciones y solicitud de usuario; paridad con `database/archive/bootstrap_legacy.sql` para desarrollo.
   - `LocalDevPasswordSeeder` (si `SEED_DEV_PASSWORDS=true`): unifica contraseñas según `SEED_ADMIN_PASSWORD`.
 - **Opcional:** `RUN_LEGACY_SQL_IMPORT=true` ejecuta **una sola vez** el import de `database/archive/bootstrap_legacy.sql` (solo si no existe `t_usuarios`; MySQL/MariaDB local). El flujo recomendado es `migrate` + `db:seed`.
+
+## Despliegue en hosting (UAT / producción)
+
+Checklist probado en **Hostinger** (`uat.sjconfiable.com`, carpeta `public_html/uat`). **No reutilizar** el `.env` ni la BD del sistema legado en `public_html` (PHP viejo).
+
+### Aislamiento
+
+| Entorno | Carpeta típica | Base de datos |
+|---------|----------------|---------------|
+| Legado (no tocar) | `domains/.../public_html/` (sin `/uat`) | BD producción legado |
+| Laravel UAT | `domains/.../public_html/uat/` | BD dedicada, p. ej. `uXXXXXX_sjconf_uat` |
+
+### `.env` en el servidor
+
+Partir de [`.env.example`](.env.example) (bloque comentado «Hosting UAT»). Mínimo:
+
+```env
+APP_ENV=staging
+APP_URL=https://uat.sjconfiable.com
+DB_DATABASE=uXXXXXX_sjconf_uat
+RUN_LEGACY_SQL_IMPORT=false
+SEED_DEV_PASSWORDS=false
+LEGACY_DOCUMENTS_ROOT=/home/usuario/.../public_html/uat/storage/app/public/uploads
+```
+
+**No** usar `APP_URL` con IP interna (`172.16.x.x`) ni rutas Windows en `LEGACY_DOCUMENTS_ROOT` — rompe PDFs y dispara avisos del navegador.
+
+Generar clave: `php artisan key:generate`
+
+### Migraciones
+
+Desde la raíz del proyecto (donde está `artisan`):
+
+```bash
+php artisan migrate --force
+```
+
+Si la BD **ya tiene tablas** (seed/import previo) y falla con *Table already exists*, aplicar solo las extensiones necesarias:
+
+```bash
+php artisan migrate --force --path=database/migrations/2026_04_24_220000_add_canal_audience_to_respuesta_solicitudes.php
+php artisan migrate --force --path=database/migrations/2026_04_25_130000_add_visible_para_cliente_to_documentos_tables.php
+```
+
+La columna `canal` en `respuesta_solicitudes` es **obligatoria** para respuestas del proveedor (evita error 500 en `SolicitudController`).
+
+### Usuario administrador (UAT)
+
+`php artisan db:seed` **no corre** fuera de `APP_ENV=local`. En hosting, sembrar catálogo e identidad y fijar contraseña:
+
+```bash
+php artisan db:seed --class=Database\\Seeders\\LegacyCatalogSeeder --force
+php artisan db:seed --class=Database\\Seeders\\LegacyIdentitySeeder --force
+php artisan tinker --execute="Illuminate\Support\Facades\DB::table('t_usuarios')->where('usuario','Administrador')->update(['password'=>Illuminate\Support\Facades\Hash::make('SuClaveUAT'),'activo'=>1]);"
+```
+
+Login: usuario **`Administrador`**, rol SuperAdmin (panel consultor).
+
+### Enlace `public/storage` (PDFs)
+
+Los uploads van a `storage/app/public/uploads/`. El navegador lee `public/storage/`.
+
+En Hostinger **`php artisan storage:link` puede fallar** (`exec()` deshabilitado). Crear el enlace manualmente:
+
+```bash
+cd /ruta/al/proyecto/uat
+# Si public/storage es una carpeta copiada antigua:
+mv public/storage public/storage.bak
+ln -s ../storage/app/public public/storage
+ls -la public/storage   # debe mostrar -> ../storage/app/public
+```
+
+Si `public/storage` es una **carpeta duplicada** (no symlink), los PDF nuevos no se ven (403 / en blanco).
+
+### Post-despliegue
+
+```bash
+php artisan config:clear
+php artisan cache:clear
+php artisan view:clear
+chmod -R 755 storage bootstrap/cache
+```
+
+Con `APP_DEBUG=false`: `php artisan config:cache` y `php artisan route:cache`.
+
+Detalle ampliado: [`docs/uat-deploy-from-scratch.md`](docs/uat-deploy-from-scratch.md).
 
 ## Autenticación y roles
 
